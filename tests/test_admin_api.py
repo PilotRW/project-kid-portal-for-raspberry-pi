@@ -106,6 +106,8 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "tab-nav" in response.text
     assert "Blocked Categories" in response.text
     assert "Debug Terminal" in response.text
+    assert "Sign out" in response.text
+    assert "lock-admin" not in response.text
     assert "content-lan-toggle" in response.text
     assert "content-lan-url" in response.text
     assert "admin.css?v=20260712-08" in response.text

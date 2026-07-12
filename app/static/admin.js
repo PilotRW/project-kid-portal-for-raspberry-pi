@@ -8,6 +8,7 @@ const loginCard = document.querySelector("#login-card");
 const adminPanel = document.querySelector("#admin-panel");
 const loginStatus = document.querySelector("#login-status");
 const saveStatus = document.querySelector("#save-status");
+const signOutButton = document.querySelector("#sign-out-admin");
 const saveBar = document.querySelector(".save-bar");
 const saveButton = document.querySelector("#save-config");
 const configTabs = new Set(["playback", "youtube", "websites"]);
@@ -38,6 +39,7 @@ async function loadAdminState() {
   renderState(data);
   loginCard.hidden = true;
   adminPanel.hidden = false;
+  signOutButton.hidden = false;
   sessionStorage.setItem("kidPortalAdminPin", adminState.pin);
 }
 
@@ -335,9 +337,10 @@ function lockAdmin() {
   adminState.config = null;
   sessionStorage.removeItem("kidPortalAdminPin");
   adminPanel.hidden = true;
+  signOutButton.hidden = true;
   loginCard.hidden = false;
   document.querySelector("#pin").value = "";
-  loginStatus.textContent = "Locked.";
+  loginStatus.textContent = "Signed out.";
 }
 
 document.querySelector("#login-form").addEventListener("submit", async (event) => {
@@ -354,7 +357,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
 });
 
 document.querySelector("#refresh-state").addEventListener("click", () => loadAdminState());
-document.querySelector("#lock-admin").addEventListener("click", lockAdmin);
+signOutButton.addEventListener("click", lockAdmin);
 document.querySelector("#save-config").addEventListener("click", saveConfig);
 document.querySelector("#exit-to-terminal").addEventListener("click", startTerminalMode);
 document.querySelector("#return-to-kiosk").addEventListener("click", returnToKiosk);
