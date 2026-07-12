@@ -29,7 +29,17 @@ async function postJson(url, payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error(`${url} failed: ${response.status}`);
+  if (!response.ok) {
+    let detail = `${url} failed: ${response.status}`;
+    try {
+      detail = (await response.json()).detail || detail;
+    } catch (error) {
+      detail = `${url} failed: ${response.status}`;
+    }
+    const error = new Error(detail);
+    error.status = response.status;
+    throw error;
+  }
   return response.json();
 }
 
@@ -352,7 +362,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
     loginStatus.textContent = "";
   } catch (error) {
     sessionStorage.removeItem("kidPortalAdminPin");
-    loginStatus.textContent = "Invalid PIN or portal unavailable.";
+    loginStatus.textContent = error.status === 429 ? error.message : "Invalid PIN or portal unavailable.";
   }
 });
 

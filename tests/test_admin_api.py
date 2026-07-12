@@ -5,6 +5,10 @@ from app.main import app
 from app.services.usage_tracker import UsageTrackerService
 
 
+def setup_function():
+    main_module.admin_pin_attempts.clear()
+
+
 def test_admin_page_loads():
     client = TestClient(app)
 
@@ -21,6 +25,22 @@ def test_admin_state_rejects_invalid_pin():
     response = client.post("/api/admin/state", json={"pin": "0000"})
 
     assert response.status_code == 403
+
+
+def test_admin_pin_lockout_after_repeated_failures(monkeypatch):
+    monkeypatch.setattr(main_module, "ADMIN_PIN_MAX_ATTEMPTS", 2)
+    monkeypatch.setattr(main_module, "ADMIN_PIN_FINDTIME_SECONDS", 600)
+    monkeypatch.setattr(main_module, "ADMIN_PIN_LOCKOUT_SECONDS", 600)
+    client = TestClient(app)
+
+    first = client.post("/api/admin/state", json={"pin": "0000"})
+    second = client.post("/api/admin/state", json={"pin": "0000"})
+    locked = client.post("/api/admin/state", json={"pin": "1234"})
+
+    assert first.status_code == 403
+    assert second.status_code == 403
+    assert locked.status_code == 429
+    assert "Retry-After" in locked.headers
 
 
 def test_admin_state_accepts_parent_pin_without_exposing_key():
@@ -111,6 +131,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "content-lan-toggle" in response.text
     assert "content-lan-url" in response.text
     assert "admin.css?v=20260712-08" in response.text
+    assert "admin.js?v=20260712-09" in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):

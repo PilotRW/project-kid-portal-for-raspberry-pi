@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -29,6 +30,10 @@ usage_tracker_service = UsageTrackerService()
 THUMBNAIL_HOSTS = {"i.ytimg.com", "s.ytimg.com"}
 NETWORK_ACCESS_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_REQUEST", "/run/kid-portal/network-access.request"))
 NETWORK_ACCESS_STATE_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_STATE", "/run/kid-portal/network-access.state"))
+ADMIN_PIN_MAX_ATTEMPTS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_MAX_ATTEMPTS", "8"))
+ADMIN_PIN_FINDTIME_SECONDS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_FINDTIME_SECONDS", "600"))
+ADMIN_PIN_LOCKOUT_SECONDS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_LOCKOUT_SECONDS", "600"))
+admin_pin_attempts: dict[str, dict[str, object]] = {}
 
 app = FastAPI(title="Kid Portal", version="0.1.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -130,10 +135,58 @@ async def restrict_admin_surface(request: Request, call_next):
     return await call_next(request)
 
 
-def verify_parent_pin(pin: str) -> PortalConfig:
+def client_identifier(request: Request | None) -> str:
+    if request is None or request.client is None:
+        return "local"
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip()
+    return request.client.host
+
+
+def check_admin_pin_lockout(client_id: str) -> None:
+    attempt = admin_pin_attempts.get(client_id)
+    if not attempt:
+        return
+    locked_until = float(attempt.get("locked_until") or 0)
+    now = time.time()
+    if locked_until > now:
+        retry_after = max(1, int(locked_until - now))
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many invalid PIN attempts. Try again in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)},
+        )
+    if locked_until:
+        admin_pin_attempts.pop(client_id, None)
+
+
+def record_admin_pin_failure(client_id: str) -> None:
+    now = time.time()
+    attempt = admin_pin_attempts.setdefault(client_id, {"failures": [], "locked_until": 0.0})
+    failures = [
+        float(item)
+        for item in attempt.get("failures", [])
+        if now - float(item) <= ADMIN_PIN_FINDTIME_SECONDS
+    ]
+    failures.append(now)
+    attempt["failures"] = failures
+    if len(failures) >= ADMIN_PIN_MAX_ATTEMPTS:
+        attempt["locked_until"] = now + ADMIN_PIN_LOCKOUT_SECONDS
+
+
+def reset_admin_pin_failures(client_id: str) -> None:
+    admin_pin_attempts.pop(client_id, None)
+
+
+def verify_parent_pin(pin: str, request: Request | None = None) -> PortalConfig:
+    client_id = client_identifier(request)
+    check_admin_pin_lockout(client_id)
     config = get_config()
     if not config.parent.verify_pin(pin):
+        record_admin_pin_failure(client_id)
         raise HTTPException(status_code=403, detail="Invalid PIN")
+    reset_admin_pin_failures(client_id)
     return config
 
 
@@ -280,8 +333,8 @@ async def write_config(config: PortalConfig) -> dict[str, str]:
 
 
 @app.put("/api/parent/config")
-async def write_parent_config(update: ParentConfigUpdate) -> dict[str, str]:
-    verify_parent_pin(update.pin)
+async def write_parent_config(update: ParentConfigUpdate, http_request: Request) -> dict[str, str]:
+    verify_parent_pin(update.pin, http_request)
     if update.view_pin:
         view_pin = update.view_pin.strip()
         if len(view_pin) < 4 or len(view_pin) > 12 or not view_pin.isdigit():
@@ -392,8 +445,8 @@ async def stop_playback_usage(request: PlaybackStopRequest) -> dict[str, str]:
 
 
 @app.post("/api/admin/state")
-async def read_admin_state(request: ParentPinRequest) -> dict[str, object]:
-    config = verify_parent_pin(request.pin)
+async def read_admin_state(request: ParentPinRequest, http_request: Request) -> dict[str, object]:
+    config = verify_parent_pin(request.pin, http_request)
     return {
         "config": config.model_dump(mode="json"),
         "network": network_info_service.get_info().model_dump(mode="json"),
@@ -407,15 +460,15 @@ async def read_admin_state(request: ParentPinRequest) -> dict[str, object]:
 
 
 @app.post("/api/admin/youtube/history/clear")
-async def clear_admin_youtube_history(request: ParentPinRequest) -> dict[str, str]:
-    verify_parent_pin(request.pin)
+async def clear_admin_youtube_history(request: ParentPinRequest, http_request: Request) -> dict[str, str]:
+    verify_parent_pin(request.pin, http_request)
     search_history_service.clear()
     return {"status": "cleared"}
 
 
 @app.post("/api/parent/network-access")
-async def update_parent_network_access(request: NetworkAccessUpdate) -> NetworkAccessState:
-    verify_parent_pin(request.pin)
+async def update_parent_network_access(request: NetworkAccessUpdate, http_request: Request) -> NetworkAccessState:
+    verify_parent_pin(request.pin, http_request)
     try:
         return set_network_access_state(request.enabled)
     except OSError:
@@ -423,20 +476,20 @@ async def update_parent_network_access(request: NetworkAccessUpdate) -> NetworkA
 
 
 @app.post("/api/parent/storage")
-async def read_parent_storage(request: ParentPinRequest) -> StorageInfo:
-    verify_parent_pin(request.pin)
+async def read_parent_storage(request: ParentPinRequest, http_request: Request) -> StorageInfo:
+    verify_parent_pin(request.pin, http_request)
     return read_storage_info()
 
 
 @app.post("/api/parent/monitoring")
-async def read_parent_monitoring(request: ParentPinRequest) -> SystemMonitoring:
-    verify_parent_pin(request.pin)
+async def read_parent_monitoring(request: ParentPinRequest, http_request: Request) -> SystemMonitoring:
+    verify_parent_pin(request.pin, http_request)
     return read_system_monitoring()
 
 
 @app.post("/api/parent/terminal/start")
-async def start_debug_terminal(request: ParentPinRequest, background_tasks: BackgroundTasks) -> SystemActionResult:
-    verify_parent_pin(request.pin)
+async def start_debug_terminal(request: ParentPinRequest, http_request: Request, background_tasks: BackgroundTasks) -> SystemActionResult:
+    verify_parent_pin(request.pin, http_request)
     background_tasks.add_task(
         run_systemctl_sequence,
         [
@@ -451,8 +504,8 @@ async def start_debug_terminal(request: ParentPinRequest, background_tasks: Back
 
 
 @app.post("/api/parent/kiosk/start")
-async def return_to_kiosk(request: ParentPinRequest, background_tasks: BackgroundTasks) -> SystemActionResult:
-    verify_parent_pin(request.pin)
+async def return_to_kiosk(request: ParentPinRequest, http_request: Request, background_tasks: BackgroundTasks) -> SystemActionResult:
+    verify_parent_pin(request.pin, http_request)
     background_tasks.add_task(
         run_systemctl_sequence,
         [
@@ -483,7 +536,7 @@ async def chromium_policy() -> dict[str, object]:
 async def start_unrestricted_mode(request: Request) -> dict[str, object]:
     body = await request.json()
     pin = str(body.get("pin", ""))
-    config = verify_parent_pin(pin)
+    config = verify_parent_pin(pin, request)
     minutes = int(body.get("minutes") or config.parent.default_unrestricted_minutes)
     return {"status": "enabled", "minutes": minutes}
 
@@ -492,5 +545,5 @@ async def start_unrestricted_mode(request: Request) -> dict[str, object]:
 async def unlock_parent_settings(request: Request) -> dict[str, str]:
     body = await request.json()
     pin = str(body.get("pin", ""))
-    config = verify_parent_pin(pin)
+    config = verify_parent_pin(pin, request)
     return {"status": "unlocked"}
