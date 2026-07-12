@@ -76,4 +76,6 @@ No allowlists, blocklists, PINs, or time limits are hardcoded in the app.
 
 Start with [docs/sd-card-prep.md](/Users/pilotrw/GITHUB/project-kid-portal-for-raspberry-pi/docs/sd-card-prep.md), then continue with [docs/raspberry-pi-setup.md](/Users/pilotrw/GITHUB/project-kid-portal-for-raspberry-pi/docs/raspberry-pi-setup.md).
 
+Security posture and production checks are tracked in [docs/security.md](/Users/pilotrw/GITHUB/project-kid-portal-for-raspberry-pi/docs/security.md).
+
 The deployment design targets Raspberry Pi OS Lite 64-bit, Raspberry Pi Zero 2 W, and remains compatible with Raspberry Pi 4/5.

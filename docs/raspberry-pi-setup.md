@@ -77,6 +77,8 @@ sudo ufw delete allow from 192.168.0.0/24 to any port 8080 proto tcp
 sudo reboot
 ```
 
+See [Security Notes](./security.md) for the expected UFW, fail2ban, admin PIN lockout, and runtime cleanup checks.
+
 ## 5. Kiosk Hardening Notes
 
 - Configure automatic login on tty1 with `raspi-config`.
@@ -96,8 +98,6 @@ sudo systemctl enable --now keyd
 ## 6. Production Gaps After POC
 
 - Persist and enforce real temporary unrestricted mode timeout.
-- Add parent portal edit screens for all config sections.
 - Add browsing history storage.
-- Add daily limit tracking.
 - Add AI classification module behind the filtering engine.
 - Add input-layer shortcut blocking with `interception-tools`, `keyd`, or a remote-only input profile.
