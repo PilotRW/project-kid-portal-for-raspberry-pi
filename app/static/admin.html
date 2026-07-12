@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kid Portal Admin</title>
-    <link rel="stylesheet" href="/static/admin.css?v=20260712-07" />
+    <link rel="stylesheet" href="/static/admin.css?v=20260712-08" />
   </head>
   <body>
     <main class="admin-shell">
@@ -13,7 +13,6 @@
           <p class="eyebrow">Kid Portal</p>
           <h1>Settings</h1>
         </div>
-        <a class="kiosk-link" href="/">Kiosk</a>
       </section>
 
       <section id="login-card" class="panel login-panel">
@@ -97,7 +96,7 @@
             <div class="network-toggle-row">
               <div>
                 <strong>Expose content on LAN</strong>
-                <span>Port 8080</span>
+                <span>Port 8080: <a id="content-lan-url" href="#" target="_blank" rel="noreferrer">unavailable</a></span>
               </div>
               <label class="switch" for="content-lan-toggle">
                 <input id="content-lan-toggle" type="checkbox" />
@@ -272,6 +271,6 @@
         </section>
       </section>
     </main>
-    <script src="/static/admin.js?v=20260712-07"></script>
+    <script src="/static/admin.js?v=20260712-08"></script>
   </body>
 </html>

@@ -17,6 +17,11 @@ body {
 
 button, input, select { font: inherit; }
 button { cursor: pointer; }
+a {
+  color: #f3c85b;
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
 
 .admin-shell {
   width: min(1180px, calc(100vw - 32px));
@@ -110,7 +115,9 @@ select {
 }
 
 .admin-panel[hidden],
-.tab-panel[hidden] {
+.tab-panel[hidden],
+.save-bar[hidden],
+#save-config[hidden] {
   display: none;
 }
 
@@ -200,6 +207,7 @@ select {
 .network-toggle-row div { display: grid; gap: 2px; }
 .network-toggle-row strong { color: #f3c85b; font-size: 15px; }
 .network-toggle-row span { color: #c2d2cb; font-size: 13px; }
+.network-toggle-row a { overflow-wrap: anywhere; }
 
 .switch {
   position: relative;
@@ -269,6 +277,7 @@ select {
 }
 
 .network-card span,
+.network-card a,
 .network-card code,
 .history-card span,
 .item-card span,

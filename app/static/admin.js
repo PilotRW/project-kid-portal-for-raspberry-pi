@@ -8,6 +8,9 @@ const loginCard = document.querySelector("#login-card");
 const adminPanel = document.querySelector("#admin-panel");
 const loginStatus = document.querySelector("#login-status");
 const saveStatus = document.querySelector("#save-status");
+const saveBar = document.querySelector(".save-bar");
+const saveButton = document.querySelector("#save-config");
+const configTabs = new Set(["playback", "youtube", "websites"]);
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -49,7 +52,7 @@ function renderState(data) {
   document.querySelector("#viewing-used").textContent = `${usedMinutes} min`;
   document.querySelector("#viewing-remaining").textContent = `${remainingMinutes} min remaining`;
   renderNetwork(data.network);
-  renderNetworkAccess(data.network_access);
+  renderNetworkAccess(data.network_access, data.network);
   renderStorage(data.storage);
   renderMonitoring(data.monitoring);
   renderHistory(data.history);
@@ -78,12 +81,22 @@ function activateTab(tabName) {
     panel.hidden = !active;
     panel.classList.toggle("is-active", active);
   });
+  if (saveButton && saveBar) {
+    const saveable = configTabs.has(target);
+    saveButton.hidden = !saveable;
+    saveBar.hidden = target === "overview";
+  }
 }
 
-function renderNetworkAccess(networkAccess) {
+function renderNetworkAccess(networkAccess, network = null) {
   const toggle = document.querySelector("#content-lan-toggle");
   if (!toggle) return;
   toggle.checked = Boolean(networkAccess?.content_lan_enabled);
+  const contentLink = document.querySelector("#content-lan-url");
+  const firstAddress = network?.addresses?.[0];
+  if (!contentLink || !firstAddress) return;
+  contentLink.href = firstAddress.portal_url;
+  contentLink.textContent = firstAddress.portal_url;
 }
 
 function renderNetwork(network) {
@@ -94,11 +107,12 @@ function renderNetwork(network) {
     return;
   }
   network.addresses.forEach((item) => {
+    const adminUrl = `http://${item.address}/`;
     const card = document.createElement("article");
     card.className = "network-card";
     card.innerHTML = `
       <strong>${escapeHtml(item.address)}</strong>
-      <span>${escapeHtml(item.portal_url)}</span>
+      <a href="${escapeHtml(adminUrl)}" target="_blank" rel="noreferrer">${escapeHtml(adminUrl)}</a>
       <code>${escapeHtml(item.ssh_target)}</code>
     `;
     list.appendChild(card);
@@ -306,7 +320,7 @@ async function updateContentLanAccess(event) {
   saveStatus.textContent = enabled ? "Opening content port 8080..." : "Closing content port 8080...";
   try {
     const state = await postJson("/api/parent/network-access", { pin: adminState.pin, enabled });
-    renderNetworkAccess(state);
+    renderNetworkAccess(state, null);
     saveStatus.textContent = state.content_lan_enabled ? "Content port 8080 is open on LAN." : "Content port 8080 is closed on LAN.";
   } catch (error) {
     toggle.checked = !enabled;

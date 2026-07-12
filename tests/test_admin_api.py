@@ -107,6 +107,8 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "Blocked Categories" in response.text
     assert "Debug Terminal" in response.text
     assert "content-lan-toggle" in response.text
+    assert "content-lan-url" in response.text
+    assert "admin.css?v=20260712-08" in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):
