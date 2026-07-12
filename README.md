@@ -10,9 +10,11 @@ The POC boots into Chromium kiosk mode pointed at a local FastAPI app. The brows
 - `app/services/config_service.py` - JSON/YAML configuration loading and saving.
 - `app/services/filtering_engine.py` - ALLOW/BLOCK/REQUIRE_PARENT_APPROVAL decision pipeline.
 - `app/services/policy_manager.py` - Chromium Enterprise Policy JSON generation.
+- `app/services/usage_tracker.py` - daily viewing limit tracking based on active YouTube playback.
 - `app/services/youtube_api.py` - YouTube Data API adapter.
 - `app/static/` - TV-friendly kiosk UI controlled by arrow keys, OK, and Back/Escape.
-- `deploy/systemd/` - systemd units for kiosk app and Chromium launcher.
+- `deploy/systemd/` - systemd units for kiosk app, LAN admin, firewall toggle helper, and Chromium launcher.
+- `deploy/scripts/` - privileged helper scripts used by narrow systemd units.
 - `deploy/chromium/` - Chromium policy template.
 
 ## Local Run
@@ -26,19 +28,26 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8080
 
 Open `http://127.0.0.1:8080`.
 
-On the Pi, the systemd service listens on `0.0.0.0:8080`, so Settings can show LAN URLs such as `http://192.168.1.50:8080` and SSH hints such as `ssh pi@192.168.1.50`.
+On the Pi, Chromium uses `http://127.0.0.1:8080/` over HDMI. LAN access to content on port `8080` is closed by default and can be opened from Settings when needed.
 
 ## Remote Admin
 
-Open `http://127.0.0.1:8080/admin` locally, or use the LAN address shown in Settings, for example `http://192.168.1.50:8080/admin`.
+Open `http://127.0.0.1:8080/admin` locally. From another device on the home network, open the Pi IP directly, for example `http://192.168.1.50/`; the LAN admin service runs on port `80` and serves Settings as its default page.
 
-The admin page is PIN protected and supports:
+The admin page is PIN protected and split into tabs for overview, network, playback, YouTube filtering, websites, and debug controls. It supports:
 
 - viewing LAN portal URLs and SSH targets;
+- opening or closing LAN access to the kiosk content port `8080`;
+- viewing storage, top CPU processes, temperature, and throttling state;
 - checking YouTube live/demo status;
 - viewing and clearing YouTube search history;
+- changing the separate viewing approval PIN;
+- configuring daily playback limits and max video duration;
 - editing allowed websites;
-- editing allowed/blocked keywords and channels.
+- editing allowed/blocked keywords, channels, approval keywords, and blocked categories;
+- opening a debug terminal on the HDMI display and returning to kiosk mode.
+
+The port `8080` LAN switch is intentionally not implemented as broad `sudo` from the web process. The admin app writes a request under `/run/kid-portal`, and a narrow systemd path/oneshot applies only the firewall rule for content access.
 
 The YouTube API key is never shown in the admin page.
 
@@ -58,6 +67,8 @@ For local testing without restarting the app, put the key in `config/youtube-api
 If `YOUTUBE_API_KEY` is missing, the YouTube search screen runs in demo mode and shows a warning in the UI instead of pretending that live YouTube search is active.
 
 YouTube search history is stored as JSON. By default it uses `config/search-history.json` locally; on the Pi you can set `KID_PORTAL_SEARCH_HISTORY=/etc/kid-portal/search-history.json`.
+
+Daily viewing limits count active YouTube playback, not kiosk uptime. The local default storage path is `config/usage.json`; on the Pi you can set `KID_PORTAL_USAGE=/etc/kid-portal/usage.json`.
 
 No allowlists, blocklists, PINs, or time limits are hardcoded in the app.
 

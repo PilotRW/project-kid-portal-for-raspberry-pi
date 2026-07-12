@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kid Portal Player</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260712-04">
+    <link rel="stylesheet" href="/static/styles.css?v=20260712-14">
   </head>
   <body>
     <main class="watch-shell">
@@ -17,7 +17,7 @@
         id="youtube-player"
         class="video-frame"
         data-video-id="__VIDEO_ID__"
-        src="https://www.youtube-nocookie.com/embed/__VIDEO_ID__?autoplay=1&rel=0&modestbranding=1&playsinline=1&disablekb=1&fs=1&enablejsapi=1&origin=http://127.0.0.1:8080"
+        src="__IFRAME_SRC__"
         title="YouTube video player"
         allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
         sandbox="allow-scripts allow-same-origin allow-presentation"
@@ -28,17 +28,88 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
       const allowedVideoId = document.querySelector("#youtube-player").dataset.videoId;
+      const limitReachedOnLoad = __LIMIT_REACHED__;
       let player = null;
       let guardTriggered = false;
+      let usageSessionId = "";
+      let lastPlayerState = "paused";
 
-      function onYouTubeIframeAPIReady() {
+      async function onYouTubeIframeAPIReady() {
+        if (limitReachedOnLoad) {
+          showUsageLimit();
+          return;
+        }
+        const started = await startUsageSession();
+        if (!started) return;
         player = new YT.Player("youtube-player", {
           events: {
             onReady: guardCurrentVideo,
-            onStateChange: guardCurrentVideo,
+            onStateChange: handlePlayerStateChange,
           },
         });
         setInterval(guardCurrentVideo, 1200);
+        setInterval(sendUsageHeartbeat, 15000);
+      }
+
+      async function startUsageSession() {
+        const response = await fetch("/api/usage/playback/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ video_id: allowedVideoId }),
+        });
+        if (response.status === 429) {
+          showUsageLimit();
+          return false;
+        }
+        if (!response.ok) return false;
+        const data = await response.json();
+        usageSessionId = data.session_id;
+        return true;
+      }
+
+      function handlePlayerStateChange(event) {
+        lastPlayerState = event.data === YT.PlayerState.PLAYING ? "playing" : "paused";
+        guardCurrentVideo();
+        sendUsageHeartbeat();
+      }
+
+      async function sendUsageHeartbeat() {
+        if (!usageSessionId) return;
+        const response = await fetch("/api/usage/playback/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: usageSessionId, state: lastPlayerState }),
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.usage?.limit_reached) {
+          showUsageLimit();
+        }
+      }
+
+      async function stopUsageSession() {
+        if (!usageSessionId) return;
+        navigator.sendBeacon(
+          "/api/usage/playback/stop",
+          new Blob([JSON.stringify({ session_id: usageSessionId })], { type: "application/json" }),
+        );
+      }
+
+      function showUsageLimit() {
+        guardTriggered = true;
+        lastPlayerState = "paused";
+        const status = document.querySelector("#player-guard-status");
+        status.hidden = false;
+        status.textContent = "Daily viewing limit reached.";
+        try {
+          player?.stopVideo();
+        } catch (error) {
+          // Cross-origin player control can fail while the iframe is unloading.
+        }
+        document.querySelector("#youtube-player").removeAttribute("src");
+        window.setTimeout(() => {
+          window.location.href = "/#youtube";
+        }, 1800);
       }
 
       function guardCurrentVideo() {
@@ -62,6 +133,7 @@
 
       document.querySelector("#back-button").addEventListener("click", () => history.back());
       document.querySelector("#home-button").addEventListener("click", () => window.location.href = "/");
+      window.addEventListener("pagehide", stopUsageSession);
       document.addEventListener("keydown", (event) => {
         if (["Escape", "Backspace"].includes(event.key)) {
           event.preventDefault();

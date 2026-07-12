@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch Kid Portal LAN content access requests
+
+[Path]
+PathChanged=/run/kid-portal/network-access.request
+Unit=kid-portal-network-access.service
+
+[Install]
+WantedBy=multi-user.target

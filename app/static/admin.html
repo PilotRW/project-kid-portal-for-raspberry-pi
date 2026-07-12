@@ -4,14 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kid Portal Admin</title>
-    <link rel="stylesheet" href="/static/admin.css?v=20260712-02" />
+    <link rel="stylesheet" href="/static/admin.css?v=20260712-07" />
   </head>
   <body>
     <main class="admin-shell">
       <section class="hero">
         <div>
           <p class="eyebrow">Kid Portal</p>
-          <h1>Remote Admin</h1>
+          <h1>Settings</h1>
         </div>
         <a class="kiosk-link" href="/">Kiosk</a>
       </section>
@@ -39,98 +39,231 @@
           </div>
         </div>
 
-        <section class="status-grid" aria-label="System status">
-          <article class="stat-card">
-            <span>YouTube</span>
-            <strong id="youtube-mode">unknown</strong>
-            <small id="youtube-source">No source</small>
-          </article>
-          <article class="stat-card">
-            <span>Daily limit</span>
-            <strong id="daily-limit">-</strong>
-            <small>minutes</small>
-          </article>
-          <article class="stat-card">
-            <span>Unrestricted</span>
-            <strong id="unrestricted-minutes">-</strong>
-            <small>default minutes</small>
-          </article>
+        <nav class="tab-nav" aria-label="Admin sections">
+          <button type="button" class="tab-button is-active" data-tab-target="overview">Overview</button>
+          <button type="button" class="tab-button" data-tab-target="network">Network</button>
+          <button type="button" class="tab-button" data-tab-target="playback">Playback</button>
+          <button type="button" class="tab-button" data-tab-target="youtube">YouTube</button>
+          <button type="button" class="tab-button" data-tab-target="websites">Websites</button>
+          <button type="button" class="tab-button" data-tab-target="debug">Debug</button>
+        </nav>
+
+        <section class="tab-panel is-active" data-tab-panel="overview">
+          <section class="status-grid" aria-label="System status">
+            <article class="stat-card">
+              <span>YouTube</span>
+              <strong id="youtube-mode">unknown</strong>
+              <small id="youtube-source">No source</small>
+            </article>
+            <article class="stat-card">
+              <span>Daily limit</span>
+              <strong id="daily-limit">-</strong>
+              <small>minutes</small>
+            </article>
+            <article class="stat-card">
+              <span>Unrestricted</span>
+              <strong id="unrestricted-minutes">-</strong>
+              <small>default minutes</small>
+            </article>
+            <article class="stat-card">
+              <span>Viewing today</span>
+              <strong id="viewing-used">-</strong>
+              <small id="viewing-remaining">playback activity</small>
+            </article>
+          </section>
+
+          <section class="ops-grid">
+            <article class="panel">
+              <div class="section-heading">
+                <h2>Storage</h2>
+              </div>
+              <div id="storage-list" class="status-grid compact-status"></div>
+            </article>
+
+            <article class="panel">
+              <div class="section-heading">
+                <h2>Monitoring</h2>
+              </div>
+              <div id="monitoring-list" class="monitoring-list"></div>
+            </article>
+          </section>
         </section>
 
-        <section class="panel">
-          <div class="section-heading">
-            <h2>Network Access</h2>
-          </div>
-          <div id="network-list" class="network-list"></div>
+        <section class="tab-panel" data-tab-panel="network" hidden>
+          <section class="panel">
+            <div class="section-heading">
+              <h2>Network Access</h2>
+            </div>
+            <div class="network-toggle-row">
+              <div>
+                <strong>Expose content on LAN</strong>
+                <span>Port 8080</span>
+              </div>
+              <label class="switch" for="content-lan-toggle">
+                <input id="content-lan-toggle" type="checkbox" />
+                <span aria-hidden="true"></span>
+              </label>
+            </div>
+            <div id="network-list" class="network-list"></div>
+          </section>
         </section>
 
-        <section class="panel">
-          <div class="section-heading">
-            <h2>YouTube Search History</h2>
-            <button id="clear-history" type="button" class="secondary">Clear</button>
-          </div>
-          <div id="history-list" class="history-list"></div>
+        <section class="tab-panel" data-tab-panel="playback" hidden>
+          <section class="panel">
+            <div class="section-heading">
+              <h2>Viewing PIN</h2>
+            </div>
+            <div class="pin-settings">
+              <label for="view-pin">Separate code for parent-approved YouTube videos</label>
+              <input id="view-pin" type="password" inputmode="numeric" placeholder="leave blank to keep current code" />
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <h2>Time Limits</h2>
+            </div>
+            <div class="settings-grid">
+              <label>
+                Daily viewing limit, minutes
+                <input id="daily-minutes" type="number" min="1" max="1440" />
+              </label>
+              <label>
+                Unrestricted mode, minutes
+                <input id="unrestricted-minutes-input" type="number" min="1" max="240" />
+              </label>
+              <label>
+                Max video duration, seconds
+                <input id="max-duration-seconds" type="number" min="1" max="86400" />
+              </label>
+            </div>
+          </section>
         </section>
 
-        <section class="panel">
-          <div class="section-heading">
-            <h2>Viewing PIN</h2>
-          </div>
-          <div class="pin-settings">
-            <label for="view-pin">Separate code for parent-approved YouTube videos</label>
-            <input id="view-pin" type="password" inputmode="numeric" placeholder="leave blank to keep current code" />
-          </div>
+        <section class="tab-panel" data-tab-panel="youtube" hidden>
+          <section class="panel">
+            <div class="section-heading">
+              <h2>YouTube Search</h2>
+            </div>
+            <div class="settings-grid">
+              <label>
+                YouTube max results
+                <input id="youtube-max-results" type="number" min="1" max="25" />
+              </label>
+              <label>
+                YouTube safe search
+                <select id="youtube-safe-search">
+                  <option value="strict">strict</option>
+                  <option value="moderate">moderate</option>
+                  <option value="none">none</option>
+                </select>
+              </label>
+              <label>
+                YouTube region
+                <input id="youtube-region-code" maxlength="2" />
+              </label>
+              <label>
+                Unknown videos
+                <select id="default-decision">
+                  <option value="REQUIRE_PARENT_APPROVAL">require parent approval</option>
+                  <option value="BLOCK">block</option>
+                  <option value="ALLOW">allow</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <h2>YouTube Search History</h2>
+              <button id="clear-history" type="button" class="secondary">Clear</button>
+            </div>
+            <div id="history-list" class="history-list"></div>
+          </section>
+
+          <section class="rules-grid">
+            <article class="panel rule-panel">
+              <h2>Allowed Keywords</h2>
+              <form class="inline-form" data-list-form="allowed_keywords">
+                <input placeholder="keyword" />
+                <button type="submit">Add</button>
+              </form>
+              <div id="allowed-keywords" class="item-list compact"></div>
+            </article>
+
+            <article class="panel rule-panel">
+              <h2>Blocked Keywords</h2>
+              <form class="inline-form" data-list-form="blocked_keywords">
+                <input placeholder="keyword" />
+                <button type="submit">Add</button>
+              </form>
+              <div id="blocked-keywords" class="item-list compact"></div>
+            </article>
+
+            <article class="panel rule-panel">
+              <h2>Parent Approval Keywords</h2>
+              <form class="inline-form" data-list-form="approval_keywords">
+                <input placeholder="keyword" />
+                <button type="submit">Add</button>
+              </form>
+              <div id="approval-keywords" class="item-list compact"></div>
+            </article>
+
+            <article class="panel rule-panel">
+              <h2>Allowed Channels</h2>
+              <form class="inline-form" data-list-form="allowed_channels">
+                <input placeholder="channel" />
+                <button type="submit">Add</button>
+              </form>
+              <div id="allowed-channels" class="item-list compact"></div>
+            </article>
+
+            <article class="panel rule-panel">
+              <h2>Blocked Channels</h2>
+              <form class="inline-form" data-list-form="blocked_channels">
+                <input placeholder="channel" />
+                <button type="submit">Add</button>
+              </form>
+              <div id="blocked-channels" class="item-list compact"></div>
+            </article>
+
+            <article class="panel rule-panel">
+              <h2>Blocked Categories</h2>
+              <form class="inline-form" data-list-form="blocked_categories">
+                <input placeholder="category id or name" />
+                <button type="submit">Add</button>
+              </form>
+              <div id="blocked-categories" class="item-list compact"></div>
+            </article>
+          </section>
         </section>
 
-        <section class="panel">
-          <div class="section-heading">
-            <h2>Allowed Websites</h2>
-          </div>
-          <form id="site-form" class="inline-form site-form">
-            <input id="site-label" placeholder="Label" required />
-            <input id="site-domain" placeholder="domain.com" required />
-            <input id="site-url" placeholder="https://domain.com/" required />
-            <button type="submit">Add</button>
-          </form>
-          <div id="site-list" class="item-list"></div>
-        </section>
-
-        <section class="rules-grid">
-          <article class="panel rule-panel">
-            <h2>Allowed Keywords</h2>
-            <form class="inline-form" data-list-form="allowed_keywords">
-              <input placeholder="keyword" />
+        <section class="tab-panel" data-tab-panel="websites" hidden>
+          <section class="panel">
+            <div class="section-heading">
+              <h2>Allowed Websites</h2>
+            </div>
+            <form id="site-form" class="inline-form site-form">
+              <input id="site-label" placeholder="Label" required />
+              <input id="site-domain" placeholder="domain.com" required />
+              <input id="site-url" placeholder="https://domain.com/" required />
               <button type="submit">Add</button>
             </form>
-            <div id="allowed-keywords" class="item-list compact"></div>
-          </article>
+            <div id="site-list" class="item-list"></div>
+          </section>
+        </section>
 
-          <article class="panel rule-panel">
-            <h2>Blocked Keywords</h2>
-            <form class="inline-form" data-list-form="blocked_keywords">
-              <input placeholder="keyword" />
-              <button type="submit">Add</button>
-            </form>
-            <div id="blocked-keywords" class="item-list compact"></div>
-          </article>
-
-          <article class="panel rule-panel">
-            <h2>Allowed Channels</h2>
-            <form class="inline-form" data-list-form="allowed_channels">
-              <input placeholder="channel" />
-              <button type="submit">Add</button>
-            </form>
-            <div id="allowed-channels" class="item-list compact"></div>
-          </article>
-
-          <article class="panel rule-panel">
-            <h2>Blocked Channels</h2>
-            <form class="inline-form" data-list-form="blocked_channels">
-              <input placeholder="channel" />
-              <button type="submit">Add</button>
-            </form>
-            <div id="blocked-channels" class="item-list compact"></div>
-          </article>
+        <section class="tab-panel" data-tab-panel="debug" hidden>
+          <section class="panel">
+            <div class="section-heading">
+              <h2>Debug Terminal</h2>
+            </div>
+            <div class="toolbar-actions debug-actions">
+              <button id="exit-to-terminal" type="button" class="danger">Exit to terminal</button>
+              <button id="return-to-kiosk" type="button" class="secondary">Return to kiosk</button>
+            </div>
+            <p class="empty">Terminal mode opens tty1 login on the Raspberry Pi display.</p>
+          </section>
         </section>
 
         <section class="save-bar">
@@ -139,6 +272,6 @@
         </section>
       </section>
     </main>
-    <script src="/static/admin.js?v=20260712-02"></script>
+    <script src="/static/admin.js?v=20260712-07"></script>
   </body>
 </html>

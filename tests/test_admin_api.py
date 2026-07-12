@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
+import app.main as main_module
 from app.main import app
+from app.services.usage_tracker import UsageTrackerService
 
 
 def test_admin_page_loads():
@@ -9,7 +11,7 @@ def test_admin_page_loads():
     response = client.get("/admin")
 
     assert response.status_code == 200
-    assert "Remote Admin" in response.text
+    assert "Settings" in response.text
     assert "/static/admin.js" in response.text
 
 
@@ -30,8 +32,12 @@ def test_admin_state_accepts_parent_pin_without_exposing_key():
     payload = response.json()
     assert "config" in payload
     assert "network" in payload
+    assert "storage" in payload
+    assert "monitoring" in payload
     assert "youtube" in payload
     assert "history" in payload
+    assert "usage" in payload
+    assert "network_access" in payload
     assert "api_key" not in payload["youtube"]
 
 
@@ -60,6 +66,8 @@ def test_parent_monitoring_requires_valid_pin():
     payload = accepted.json()
     assert "top_processes" in payload
     assert "hottest_process" in payload
+    assert "temperature_c" in payload
+    assert "throttled_state" in payload
 
 
 def test_terminal_controls_are_pin_protected():
@@ -93,6 +101,40 @@ def test_remote_admin_includes_viewing_pin_control():
     assert response.status_code == 200
     assert "Viewing PIN" in response.text
     assert "view-pin" in response.text
+    assert "Time Limits" in response.text
+    assert "YouTube Search" in response.text
+    assert "tab-nav" in response.text
+    assert "Blocked Categories" in response.text
+    assert "Debug Terminal" in response.text
+    assert "content-lan-toggle" in response.text
+
+
+def test_admin_surface_uses_admin_as_default(monkeypatch):
+    monkeypatch.setenv("KID_PORTAL_SURFACE", "admin")
+    client = TestClient(app)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Settings" in response.text
+    assert "login-form" in response.text
+
+
+def test_admin_surface_blocks_content_routes(monkeypatch):
+    monkeypatch.setenv("KID_PORTAL_SURFACE", "admin")
+    client = TestClient(app)
+
+    response = client.get("/youtube/watch/video-123")
+
+    assert response.status_code == 404
+
+
+def test_network_access_update_requires_valid_pin():
+    client = TestClient(app)
+
+    response = client.post("/api/parent/network-access", json={"pin": "0000", "enabled": True})
+
+    assert response.status_code == 403
 
 
 def test_youtube_approval_uses_separate_viewing_pin():
@@ -133,3 +175,23 @@ def test_watch_page_sandboxes_youtube_embed():
     assert "fs=1" in response.text
     assert "enablejsapi=1" in response.text
     assert "guardCurrentVideo" in response.text
+    assert "/api/usage/playback/heartbeat" in response.text
+
+
+def test_playback_usage_api_tracks_active_play(tmp_path, monkeypatch):
+    monkeypatch.setattr(main_module, "usage_tracker_service", UsageTrackerService(tmp_path / "usage.json"))
+    client = TestClient(app)
+
+    started = client.post("/api/usage/playback/start", json={"video_id": "video-123"})
+
+    assert started.status_code == 200
+    session_id = started.json()["session_id"]
+    heartbeat = client.post(
+        "/api/usage/playback/heartbeat",
+        json={"session_id": session_id, "state": "playing"},
+    )
+    stopped = client.post("/api/usage/playback/stop", json={"session_id": session_id})
+
+    assert heartbeat.status_code == 200
+    assert "usage" in heartbeat.json()
+    assert stopped.status_code == 200

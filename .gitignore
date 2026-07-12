@@ -5,6 +5,7 @@ __pycache__/
 *.egg-info/
 .env
 config/search-history.json
+config/usage.json
 config/youtube-api-key.txt
 outputs/
 work/

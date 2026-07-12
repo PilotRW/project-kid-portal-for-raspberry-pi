@@ -66,8 +66,7 @@ function showView(name) {
 }
 
 function openSettings() {
-  showView("settings");
-  loadNetworkInfo();
+  window.location.href = "/admin";
 }
 
 function refreshFocus() {
@@ -360,6 +359,7 @@ async function unlockSettings(event) {
   document.querySelector("#parent-panel").hidden = false;
   await loadParentConfig();
   await loadParentStorage();
+  await loadParentUsage();
   await loadParentMonitoring();
   await loadParentHistorySummary();
   refreshFocus();
@@ -454,6 +454,34 @@ async function loadParentStorage() {
     <article class="storage-card">
       <strong>${escapeHtml(formatBytes(data.total_bytes))}</strong>
       <span>Total capacity</span>
+    </article>
+  `;
+  refreshFocus();
+}
+
+async function loadParentUsage() {
+  const container = document.querySelector("#usage-info");
+  container.innerHTML = '<p class="history-empty">Checking viewing activity...</p>';
+  const response = await fetch("/api/usage/status");
+  if (!response.ok) {
+    container.innerHTML = '<p class="history-empty">Viewing activity unavailable</p>';
+    return;
+  }
+  const usage = await response.json();
+  const usedMinutes = Math.floor(usage.used_seconds / 60);
+  const remainingMinutes = Math.ceil(usage.remaining_seconds / 60);
+  container.innerHTML = `
+    <article class="storage-card">
+      <strong>${escapeHtml(String(usedMinutes))} min</strong>
+      <span>Used today</span>
+    </article>
+    <article class="storage-card">
+      <strong>${escapeHtml(String(remainingMinutes))} min</strong>
+      <span>Remaining</span>
+    </article>
+    <article class="storage-card">
+      <strong>${usage.limit_reached ? "Stop" : "OK"}</strong>
+      <span>Playback limit</span>
     </article>
   `;
   refreshFocus();
@@ -774,6 +802,7 @@ document.querySelector("#cancel-view-approval").addEventListener("click", cancel
 document.querySelector("#clear-history").addEventListener("click", clearSearchHistory);
 document.querySelector("#refresh-network").addEventListener("click", loadNetworkInfo);
 document.querySelector("#refresh-storage").addEventListener("click", loadParentStorage);
+document.querySelector("#refresh-usage").addEventListener("click", loadParentUsage);
 document.querySelector("#refresh-monitoring").addEventListener("click", loadParentMonitoring);
 document.querySelector("#clear-parent-history").addEventListener("click", clearParentHistory);
 document.querySelector("#exit-to-terminal").addEventListener("click", startTerminalMode);

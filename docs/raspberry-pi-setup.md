@@ -63,10 +63,17 @@ curl -s http://127.0.0.1:8080/api/policies/chromium | sudo tee /etc/chromium/pol
 
 ```bash
 sudo cp deploy/systemd/*.service /etc/systemd/system/
+sudo cp deploy/systemd/*.path /etc/systemd/system/
+sudo cp deploy/tmpfiles/kid-portal.conf /etc/tmpfiles.d/kid-portal.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/kid-portal.conf
+sudo cp deploy/scripts/kid-portal-network-access.sh /usr/local/sbin/kid-portal-network-access
+sudo chmod 755 /usr/local/sbin/kid-portal-network-access
 sudo mkdir -p /etc/X11/xorg.conf.d
 sudo cp deploy/xorg/99-kid-portal.conf /etc/X11/xorg.conf.d/99-kid-portal.conf
 sudo systemctl daemon-reload
-sudo systemctl enable kid-portal.service kid-portal-x.service kid-portal-kiosk.service
+sudo systemctl enable kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-x.service kid-portal-kiosk.service
+sudo ufw allow from 192.168.0.0/24 to any port 80 proto tcp
+sudo ufw delete allow from 192.168.0.0/24 to any port 8080 proto tcp
 sudo reboot
 ```
 

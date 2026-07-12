@@ -1,0 +1,8 @@
+[Unit]
+Description=Apply Kid Portal LAN content access rule
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/kid-portal-network-access

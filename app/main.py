@@ -1,3 +1,4 @@
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -14,6 +15,7 @@ from app.services.filtering_engine import FilteringEngine
 from app.services.network_info import NetworkInfoService
 from app.services.policy_manager import PolicyManager
 from app.services.search_history import SearchHistoryService
+from app.services.usage_tracker import UsageTrackerService
 from app.services.youtube_api import YouTubeApiService
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -23,7 +25,10 @@ config_service = ConfigService()
 youtube_service = YouTubeApiService()
 search_history_service = SearchHistoryService()
 network_info_service = NetworkInfoService()
+usage_tracker_service = UsageTrackerService()
 THUMBNAIL_HOSTS = {"i.ytimg.com", "s.ytimg.com"}
+NETWORK_ACCESS_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_REQUEST", "/run/kid-portal/network-access.request"))
+NETWORK_ACCESS_STATE_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_STATE", "/run/kid-portal/network-access.state"))
 
 app = FastAPI(title="Kid Portal", version="0.1.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -42,6 +47,19 @@ class ParentPinRequest(BaseModel):
 class ViewPinRequest(BaseModel):
     pin: str
     video_id: str
+
+
+class PlaybackStartRequest(BaseModel):
+    video_id: str
+
+
+class PlaybackHeartbeatRequest(BaseModel):
+    session_id: str
+    state: str = "paused"
+
+
+class PlaybackStopRequest(BaseModel):
+    session_id: str
 
 
 class StorageInfo(BaseModel):
@@ -64,10 +82,52 @@ class ProcessInfo(BaseModel):
 class SystemMonitoring(BaseModel):
     top_processes: list[ProcessInfo]
     hottest_process: ProcessInfo | None
+    temperature_c: float | None = None
+    throttled_state: str | None = None
 
 
 class SystemActionResult(BaseModel):
     status: str
+
+
+class NetworkAccessState(BaseModel):
+    content_port: int = 8080
+    content_lan_enabled: bool
+    admin_port: int = 80
+
+
+class NetworkAccessUpdate(ParentPinRequest):
+    enabled: bool
+
+
+ADMIN_SURFACE_ALLOWED_PATHS = {
+    "/",
+    "/admin",
+    "/api/admin/state",
+    "/api/admin/youtube/history/clear",
+    "/api/parent/config",
+    "/api/parent/network-access",
+    "/api/parent/storage",
+    "/api/parent/monitoring",
+    "/api/parent/terminal/start",
+    "/api/parent/kiosk/start",
+}
+ADMIN_SURFACE_ALLOWED_PREFIXES = ("/static/admin.",)
+
+
+def is_admin_surface() -> bool:
+    return os.environ.get("KID_PORTAL_SURFACE") == "admin"
+
+
+def is_admin_surface_path_allowed(path: str) -> bool:
+    return path in ADMIN_SURFACE_ALLOWED_PATHS or path.startswith(ADMIN_SURFACE_ALLOWED_PREFIXES)
+
+
+@app.middleware("http")
+async def restrict_admin_surface(request: Request, call_next):
+    if is_admin_surface() and request.method != "OPTIONS" and not is_admin_surface_path_allowed(request.url.path):
+        return Response(status_code=404)
+    return await call_next(request)
 
 
 def verify_parent_pin(pin: str) -> PortalConfig:
@@ -93,8 +153,113 @@ def run_systemctl_sequence(commands: list[list[str]]) -> None:
         subprocess.run(command, check=True, timeout=30)
 
 
+def read_storage_info() -> StorageInfo:
+    usage = shutil.disk_usage("/")
+    used = usage.total - usage.free
+    return StorageInfo(
+        path="/",
+        total_bytes=usage.total,
+        used_bytes=used,
+        free_bytes=usage.free,
+        percent_used=round((used / usage.total) * 100, 1) if usage.total else 0,
+    )
+
+
+def read_system_monitoring() -> SystemMonitoring:
+    temperature_c = read_temperature_c()
+    throttled_state = read_throttled_state()
+    try:
+        output = subprocess.check_output(
+            ["ps", "-eo", "pid,user,pcpu,pmem,comm,args", "--sort=-pcpu"],
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return SystemMonitoring(
+            top_processes=[],
+            hottest_process=None,
+            temperature_c=temperature_c,
+            throttled_state=throttled_state,
+        )
+    rows = []
+    for line in output.splitlines()[1:11]:
+        parts = line.split(None, 5)
+        if len(parts) < 6:
+            continue
+        pid, user, cpu, memory, command, args = parts
+        rows.append(
+            ProcessInfo(
+                pid=int(pid),
+                user=user,
+                cpu_percent=float(cpu),
+                memory_percent=float(memory),
+                command=command,
+                args=args,
+            )
+        )
+    return SystemMonitoring(
+        top_processes=rows,
+        hottest_process=rows[0] if rows else None,
+        temperature_c=temperature_c,
+        throttled_state=throttled_state,
+    )
+
+
+def read_temperature_c() -> float | None:
+    try:
+        output = subprocess.check_output(["vcgencmd", "measure_temp"], text=True, timeout=5).strip()
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    prefix = "temp="
+    suffix = "'C"
+    if not output.startswith(prefix) or not output.endswith(suffix):
+        return None
+    try:
+        return float(output.removeprefix(prefix).removesuffix(suffix))
+    except ValueError:
+        return None
+
+
+def read_throttled_state() -> str | None:
+    try:
+        output = subprocess.check_output(["vcgencmd", "get_throttled"], text=True, timeout=5).strip()
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    return output.split("=", 1)[1] if "=" in output else output
+
+
+def read_network_access_state() -> NetworkAccessState:
+    try:
+        state = NETWORK_ACCESS_STATE_PATH.read_text(encoding="utf-8").strip()
+    except OSError:
+        return NetworkAccessState(content_lan_enabled=False)
+    return NetworkAccessState(content_lan_enabled=state == "enabled")
+
+
+def set_network_access_state(enabled: bool) -> NetworkAccessState:
+    NETWORK_ACCESS_REQUEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+    NETWORK_ACCESS_REQUEST_PATH.write_text("enabled\n" if enabled else "disabled\n", encoding="utf-8")
+    return NetworkAccessState(content_lan_enabled=enabled)
+
+
+def render_watch_page(video_id: str, limit_reached: bool = False) -> str:
+    iframe_src = "" if limit_reached else (
+        f"https://www.youtube-nocookie.com/embed/{video_id}"
+        "?autoplay=1&rel=0&modestbranding=1&playsinline=1&disablekb=1&fs=1&enablejsapi=1&origin=http://127.0.0.1:8080"
+    )
+    return (
+        (STATIC_DIR / "watch.html")
+        .read_text(encoding="utf-8")
+        .replace("__VIDEO_ID__", video_id)
+        .replace("__IFRAME_SRC__", iframe_src)
+        .replace("__LIMIT_REACHED__", "true" if limit_reached else "false")
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home() -> str:
+    if is_admin_surface():
+        return (STATIC_DIR / "admin.html").read_text(encoding="utf-8")
     return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
 
@@ -193,13 +358,50 @@ async def unlock_youtube_approval(request: ViewPinRequest) -> dict[str, str]:
     return {"status": "unlocked", "watch_url": f"/youtube/watch/{request.video_id}"}
 
 
+@app.get("/api/usage/status")
+async def read_usage_status() -> dict[str, object]:
+    config = get_config()
+    return usage_tracker_service.status(config.limits.daily_minutes).model_dump(mode="json")
+
+
+@app.post("/api/usage/playback/start")
+async def start_playback_usage(request: PlaybackStartRequest) -> dict[str, object]:
+    config = get_config()
+    try:
+        session = usage_tracker_service.start_session(request.video_id, config.limits.daily_minutes)
+    except RuntimeError:
+        raise HTTPException(status_code=429, detail="Daily viewing limit reached") from None
+    return {
+        "session_id": session.session_id,
+        "usage": usage_tracker_service.status(config.limits.daily_minutes).model_dump(mode="json"),
+    }
+
+
+@app.post("/api/usage/playback/heartbeat")
+async def heartbeat_playback_usage(request: PlaybackHeartbeatRequest) -> dict[str, object]:
+    config = get_config()
+    player_state = "playing" if request.state == "playing" else "paused"
+    usage = usage_tracker_service.heartbeat(request.session_id, player_state, config.limits.daily_minutes)
+    return {"usage": usage.model_dump(mode="json")}
+
+
+@app.post("/api/usage/playback/stop")
+async def stop_playback_usage(request: PlaybackStopRequest) -> dict[str, str]:
+    usage_tracker_service.stop_session(request.session_id)
+    return {"status": "stopped"}
+
+
 @app.post("/api/admin/state")
 async def read_admin_state(request: ParentPinRequest) -> dict[str, object]:
     config = verify_parent_pin(request.pin)
     return {
         "config": config.model_dump(mode="json"),
         "network": network_info_service.get_info().model_dump(mode="json"),
+        "network_access": read_network_access_state().model_dump(mode="json"),
+        "storage": read_storage_info().model_dump(mode="json"),
+        "monitoring": read_system_monitoring().model_dump(mode="json"),
         "youtube": youtube_service.status(),
+        "usage": usage_tracker_service.status(config.limits.daily_minutes).model_dump(mode="json"),
         "history": [entry.model_dump(mode="json") for entry in search_history_service.list_entries()],
     }
 
@@ -211,48 +413,25 @@ async def clear_admin_youtube_history(request: ParentPinRequest) -> dict[str, st
     return {"status": "cleared"}
 
 
+@app.post("/api/parent/network-access")
+async def update_parent_network_access(request: NetworkAccessUpdate) -> NetworkAccessState:
+    verify_parent_pin(request.pin)
+    try:
+        return set_network_access_state(request.enabled)
+    except OSError:
+        raise HTTPException(status_code=500, detail="Network access update failed") from None
+
+
 @app.post("/api/parent/storage")
 async def read_parent_storage(request: ParentPinRequest) -> StorageInfo:
     verify_parent_pin(request.pin)
-    usage = shutil.disk_usage("/")
-    used = usage.total - usage.free
-    return StorageInfo(
-        path="/",
-        total_bytes=usage.total,
-        used_bytes=used,
-        free_bytes=usage.free,
-        percent_used=round((used / usage.total) * 100, 1) if usage.total else 0,
-    )
+    return read_storage_info()
 
 
 @app.post("/api/parent/monitoring")
 async def read_parent_monitoring(request: ParentPinRequest) -> SystemMonitoring:
     verify_parent_pin(request.pin)
-    try:
-        output = subprocess.check_output(
-            ["ps", "-eo", "pid,user,pcpu,pmem,comm,args", "--sort=-pcpu"],
-            text=True,
-            timeout=10,
-        )
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        return SystemMonitoring(top_processes=[], hottest_process=None)
-    rows = []
-    for line in output.splitlines()[1:11]:
-        parts = line.split(None, 5)
-        if len(parts) < 6:
-            continue
-        pid, user, cpu, memory, command, args = parts
-        rows.append(
-            ProcessInfo(
-                pid=int(pid),
-                user=user,
-                cpu_percent=float(cpu),
-                memory_percent=float(memory),
-                command=command,
-                args=args,
-            )
-        )
-    return SystemMonitoring(top_processes=rows, hottest_process=rows[0] if rows else None)
+    return read_system_monitoring()
 
 
 @app.post("/api/parent/terminal/start")
@@ -289,7 +468,10 @@ async def return_to_kiosk(request: ParentPinRequest, background_tasks: Backgroun
 
 @app.get("/youtube/watch/{video_id}", response_class=HTMLResponse)
 async def watch_youtube(video_id: str) -> str:
-    return (STATIC_DIR / "watch.html").read_text(encoding="utf-8").replace("__VIDEO_ID__", video_id)
+    config = get_config()
+    if usage_tracker_service.status(config.limits.daily_minutes).limit_reached:
+        return render_watch_page(video_id, limit_reached=True)
+    return render_watch_page(video_id)
 
 
 @app.get("/api/policies/chromium")
