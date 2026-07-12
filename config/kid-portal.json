@@ -24,6 +24,16 @@
       "domain": "rezka.ag",
       "label": "Rezka",
       "url": "https://rezka.ag/"
+    },
+    {
+      "domain": "kids.orf.at",
+      "label": "ORF KiDS",
+      "url": "https://kids.orf.at/"
+    },
+    {
+      "domain": "on.orf.at",
+      "label": "ORF Live",
+      "url": "https://on.orf.at/live"
     }
   ],
   "filtering": {

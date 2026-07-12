@@ -31,6 +31,8 @@ const siteTileThemes = [
   { match: /disney/i, visual: "D+", theme: "disney" },
   { match: /netflix/i, visual: "N", theme: "netflix" },
   { match: /rezka/i, visual: "R", theme: "rezka" },
+  { match: /orf kids|kids\.orf/i, visual: "KiDS", theme: "orf-kids" },
+  { match: /orf live|on\.orf/i, visual: "ORF", theme: "orf-live" },
 ];
 
 const keyboardLayouts = {

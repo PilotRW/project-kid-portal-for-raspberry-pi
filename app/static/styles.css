@@ -247,6 +247,14 @@ h2 {
   background: linear-gradient(145deg, #f0b429, #1d1607 76%);
 }
 
+.tile-orf-kids {
+  background: linear-gradient(145deg, #f6d743, #0c6b76 76%);
+}
+
+.tile-orf-live {
+  background: linear-gradient(145deg, #e22c2f, #18245a 76%);
+}
+
 .tile-default {
   background: linear-gradient(145deg, #2c6e7f, #102126 76%);
 }
