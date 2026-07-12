@@ -1,0 +1,25 @@
+[Unit]
+Description=Minimal X server for Kid Portal
+After=systemd-user-sessions.service
+Conflicts=getty@tty1.service
+
+[Service]
+User=pi
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Environment=HOME=/home/pi
+Environment=XAUTHORITY=/home/pi/.Xauthority
+ExecStart=/usr/bin/startx /usr/bin/openbox-session -- :0
+Restart=always
+RestartSec=2
+KillMode=control-group
+TimeoutStopSec=10
+SendSIGKILL=yes
+
+[Install]
+WantedBy=multi-user.target

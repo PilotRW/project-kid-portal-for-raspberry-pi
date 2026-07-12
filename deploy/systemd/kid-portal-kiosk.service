@@ -1,0 +1,18 @@
+[Unit]
+Description=Kid Portal Chromium kiosk
+After=kid-portal.service kid-portal-x.service
+Requires=kid-portal.service kid-portal-x.service
+
+[Service]
+User=pi
+Environment=DISPLAY=:0
+Environment=HOME=/home/pi
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do [ -S /tmp/.X11-unix/X0 ] && exit 0; sleep 1; done; exit 1'
+ExecStartPre=/bin/sh -c 'output=$$(xrandr --query | awk "/ connected/{print $$1; exit}"); [ -n "$$output" ] && xrandr --output "$$output" --mode 1920x1080 --rate 60 || true'
+ExecStartPre=/usr/bin/xset s off -dpms s noblank
+ExecStart=/usr/lib/chromium/chromium --user-data-dir=/home/pi/.config/kid-portal-chromium --no-first-run --no-default-browser-check --disable-restore-session-state --disable-extensions --disable-component-extensions-with-background-pages --disable-background-networking --disable-sync --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --alsa-output-device=plughw:1,0 --autoplay-policy=no-user-gesture-required --kiosk http://127.0.0.1:8080/ --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-features=Translate,DesktopPWAsTabStrip --overscroll-history-navigation=0
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

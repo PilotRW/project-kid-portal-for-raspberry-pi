@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kid Portal Player</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260712-04">
+  </head>
+  <body>
+    <main class="watch-shell">
+      <header class="compact-header watch-header">
+        <button class="icon-button" id="back-button" aria-label="Back">‹</button>
+        <button class="nav-button" id="home-button" type="button">Home</button>
+        <h2>YouTube</h2>
+      </header>
+      <iframe
+        id="youtube-player"
+        class="video-frame"
+        data-video-id="__VIDEO_ID__"
+        src="https://www.youtube-nocookie.com/embed/__VIDEO_ID__?autoplay=1&rel=0&modestbranding=1&playsinline=1&disablekb=1&fs=1&enablejsapi=1&origin=http://127.0.0.1:8080"
+        title="YouTube video player"
+        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+        sandbox="allow-scripts allow-same-origin allow-presentation"
+        allowfullscreen>
+      </iframe>
+      <div id="player-guard-status" class="player-guard-status" hidden></div>
+    </main>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+      const allowedVideoId = document.querySelector("#youtube-player").dataset.videoId;
+      let player = null;
+      let guardTriggered = false;
+
+      function onYouTubeIframeAPIReady() {
+        player = new YT.Player("youtube-player", {
+          events: {
+            onReady: guardCurrentVideo,
+            onStateChange: guardCurrentVideo,
+          },
+        });
+        setInterval(guardCurrentVideo, 1200);
+      }
+
+      function guardCurrentVideo() {
+        if (!player || guardTriggered || typeof player.getVideoData !== "function") return;
+        const currentVideoId = player.getVideoData()?.video_id;
+        if (currentVideoId && currentVideoId !== allowedVideoId) {
+          guardTriggered = true;
+          const status = document.querySelector("#player-guard-status");
+          status.hidden = false;
+          status.textContent = "Blocked: this video was not selected through Kid Portal search.";
+          try {
+            player.stopVideo();
+          } catch (error) {
+            // The browser may deny cross-origin control during navigation; the redirect below is the fallback.
+          }
+          window.setTimeout(() => {
+            window.location.href = "/#youtube";
+          }, 900);
+        }
+      }
+
+      document.querySelector("#back-button").addEventListener("click", () => history.back());
+      document.querySelector("#home-button").addEventListener("click", () => window.location.href = "/");
+      document.addEventListener("keydown", (event) => {
+        if (["Escape", "Backspace"].includes(event.key)) {
+          event.preventDefault();
+          history.back();
+        }
+      });
+      document.addEventListener("contextmenu", (event) => event.preventDefault());
+    </script>
+  </body>
+</html>

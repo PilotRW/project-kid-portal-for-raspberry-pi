@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kid Portal Admin</title>
+    <link rel="stylesheet" href="/static/admin.css?v=20260712-02" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Kid Portal</p>
+          <h1>Remote Admin</h1>
+        </div>
+        <a class="kiosk-link" href="/">Kiosk</a>
+      </section>
+
+      <section id="login-card" class="panel login-panel">
+        <form id="login-form" class="login-form">
+          <label for="pin">Parent PIN</label>
+          <div class="login-row">
+            <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" required />
+            <button type="submit">Unlock</button>
+          </div>
+          <p id="login-status" class="status" role="status"></p>
+        </form>
+      </section>
+
+      <section id="admin-panel" class="admin-panel" hidden>
+        <div class="toolbar">
+          <div>
+            <p class="eyebrow">Connected</p>
+            <h2 id="host-name">Portal</h2>
+          </div>
+          <div class="toolbar-actions">
+            <button id="refresh-state" type="button">Refresh</button>
+            <button id="lock-admin" type="button" class="secondary">Lock</button>
+          </div>
+        </div>
+
+        <section class="status-grid" aria-label="System status">
+          <article class="stat-card">
+            <span>YouTube</span>
+            <strong id="youtube-mode">unknown</strong>
+            <small id="youtube-source">No source</small>
+          </article>
+          <article class="stat-card">
+            <span>Daily limit</span>
+            <strong id="daily-limit">-</strong>
+            <small>minutes</small>
+          </article>
+          <article class="stat-card">
+            <span>Unrestricted</span>
+            <strong id="unrestricted-minutes">-</strong>
+            <small>default minutes</small>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <h2>Network Access</h2>
+          </div>
+          <div id="network-list" class="network-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <h2>YouTube Search History</h2>
+            <button id="clear-history" type="button" class="secondary">Clear</button>
+          </div>
+          <div id="history-list" class="history-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <h2>Viewing PIN</h2>
+          </div>
+          <div class="pin-settings">
+            <label for="view-pin">Separate code for parent-approved YouTube videos</label>
+            <input id="view-pin" type="password" inputmode="numeric" placeholder="leave blank to keep current code" />
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <h2>Allowed Websites</h2>
+          </div>
+          <form id="site-form" class="inline-form site-form">
+            <input id="site-label" placeholder="Label" required />
+            <input id="site-domain" placeholder="domain.com" required />
+            <input id="site-url" placeholder="https://domain.com/" required />
+            <button type="submit">Add</button>
+          </form>
+          <div id="site-list" class="item-list"></div>
+        </section>
+
+        <section class="rules-grid">
+          <article class="panel rule-panel">
+            <h2>Allowed Keywords</h2>
+            <form class="inline-form" data-list-form="allowed_keywords">
+              <input placeholder="keyword" />
+              <button type="submit">Add</button>
+            </form>
+            <div id="allowed-keywords" class="item-list compact"></div>
+          </article>
+
+          <article class="panel rule-panel">
+            <h2>Blocked Keywords</h2>
+            <form class="inline-form" data-list-form="blocked_keywords">
+              <input placeholder="keyword" />
+              <button type="submit">Add</button>
+            </form>
+            <div id="blocked-keywords" class="item-list compact"></div>
+          </article>
+
+          <article class="panel rule-panel">
+            <h2>Allowed Channels</h2>
+            <form class="inline-form" data-list-form="allowed_channels">
+              <input placeholder="channel" />
+              <button type="submit">Add</button>
+            </form>
+            <div id="allowed-channels" class="item-list compact"></div>
+          </article>
+
+          <article class="panel rule-panel">
+            <h2>Blocked Channels</h2>
+            <form class="inline-form" data-list-form="blocked_channels">
+              <input placeholder="channel" />
+              <button type="submit">Add</button>
+            </form>
+            <div id="blocked-channels" class="item-list compact"></div>
+          </article>
+        </section>
+
+        <section class="save-bar">
+          <p id="save-status" class="status" role="status"></p>
+          <button id="save-config" type="button">Save Changes</button>
+        </section>
+      </section>
+    </main>
+    <script src="/static/admin.js?v=20260712-02"></script>
+  </body>
+</html>

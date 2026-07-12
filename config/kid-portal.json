@@ -1,0 +1,96 @@
+{
+  "allowed_sites": [
+    {
+      "domain": "wikipedia.org",
+      "label": "Wikipedia",
+      "url": "https://www.wikipedia.org/"
+    },
+    {
+      "domain": "khanacademy.org",
+      "label": "Khan Academy",
+      "url": "https://www.khanacademy.org/"
+    },
+    {
+      "domain": "disneyplus.com",
+      "label": "Disney+",
+      "url": "https://www.disneyplus.com/"
+    },
+    {
+      "domain": "netflix.com",
+      "label": "Netflix",
+      "url": "https://www.netflix.com/"
+    },
+    {
+      "domain": "rezka.ag",
+      "label": "Rezka",
+      "url": "https://rezka.ag/"
+    }
+  ],
+  "filtering": {
+    "allowed_channels": [
+      "Demo Learning Channel"
+    ],
+    "allowed_keywords": [
+      "science",
+      "math",
+      "kids",
+      "education",
+      "history",
+      "learn",
+      "learning",
+      "school",
+      "alphabet",
+      "numbers",
+      "nature",
+      "space",
+      "animals",
+      "documentary"
+    ],
+    "approval_keywords": [
+      "politics",
+      "challenge"
+    ],
+    "blocked_channels": [],
+    "blocked_categories": [
+      "20",
+      "Gaming"
+    ],
+    "blocked_keywords": [
+      "prank",
+      "violence",
+      "horror",
+      "brainrot",
+      "clickbait",
+      "minecraft",
+      "roblox",
+      "fortnite",
+      "preston",
+      "mrbeast",
+      "mr beast",
+      "speedrun",
+      "noob",
+      "tnt",
+      "herobrine",
+      "skibidi",
+      "among us",
+      "poppy playtime",
+      "garten of banban",
+      "rainbow friends"
+    ],
+    "default_decision": "REQUIRE_PARENT_APPROVAL",
+    "max_duration_seconds": 3600
+  },
+  "limits": {
+    "daily_minutes": 90
+  },
+  "parent": {
+    "default_unrestricted_minutes": 30,
+    "pin_sha256": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+    "view_pin_sha256": "fe2592b42a727e977f055947385b709cc82b16b9a87f88c6abf3900d65d0cdc3"
+  },
+  "youtube": {
+    "max_results": 20,
+    "region_code": "US",
+    "safe_search": "strict"
+  }
+}

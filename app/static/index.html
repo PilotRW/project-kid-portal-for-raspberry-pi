@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kid Portal</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260712-13">
+  </head>
+  <body>
+    <main class="shell">
+      <section id="home" class="view active">
+        <header class="home-header">
+          <div>
+            <p class="eyebrow">Family Kiosk</p>
+            <h1>Kid Portal</h1>
+          </div>
+          <button class="settings-icon-button" data-settings type="button" aria-label="Settings" title="Settings">
+            <span aria-hidden="true">&#9881;</span>
+          </button>
+        </header>
+        <div id="tiles" class="tile-grid" role="listbox" aria-label="Portal apps"></div>
+      </section>
+
+      <section id="youtube" class="view">
+        <header class="compact-header">
+          <button class="icon-button" data-back aria-label="Back">‹</button>
+          <button class="nav-button" data-home type="button">Home</button>
+          <h2>YouTube</h2>
+          <span id="youtube-mode" class="mode-badge">demo</span>
+        </header>
+        <form id="youtube-search" class="search-row">
+          <input id="youtube-query" type="search" placeholder="Search safe videos" autocomplete="off" readonly data-keyboard="text">
+          <button type="submit">OK</button>
+        </form>
+        <section class="history-panel" aria-label="Search history">
+          <div class="history-header">
+            <h3>Recent searches</h3>
+            <button id="clear-history" type="button" hidden>Clear</button>
+          </div>
+          <div id="search-history" class="history-list"></div>
+        </section>
+        <div id="youtube-status" class="status"></div>
+        <section id="view-approval-panel" class="view-approval-panel" hidden>
+          <div>
+            <h3>Parent code required</h3>
+            <p id="view-approval-title"></p>
+          </div>
+          <form id="view-approval-form" class="approval-form">
+            <input id="view-approval-pin" type="password" inputmode="numeric" placeholder="Viewing PIN" readonly data-keyboard="numeric">
+            <button type="submit">Watch</button>
+            <button id="cancel-view-approval" type="button" class="secondary-button">Cancel</button>
+          </form>
+        </section>
+        <div id="youtube-results" class="results-grid"></div>
+      </section>
+
+      <section id="settings" class="view">
+        <header class="compact-header">
+          <button class="icon-button" data-back aria-label="Back">‹</button>
+          <button class="nav-button" data-home type="button">Home</button>
+          <h2>Settings</h2>
+        </header>
+        <section class="network-panel" aria-label="Network access">
+          <div class="history-header">
+            <h3>Network access</h3>
+            <button id="refresh-network" type="button">Refresh</button>
+          </div>
+          <div id="network-info" class="network-info"></div>
+        </section>
+        <form id="pin-form" class="pin-panel">
+          <input id="pin" type="password" inputmode="numeric" placeholder="PIN" readonly data-keyboard="numeric">
+          <button type="submit">Unlock</button>
+        </form>
+        <div id="settings-status" class="status"></div>
+        <section id="parent-panel" class="parent-panel" hidden>
+          <section class="admin-section">
+            <div class="history-header">
+              <h3>System storage</h3>
+              <button id="refresh-storage" type="button">Refresh</button>
+            </div>
+            <div id="storage-info" class="storage-info"></div>
+          </section>
+
+          <section class="admin-section">
+            <div class="history-header">
+              <h3>System monitoring</h3>
+              <button id="refresh-monitoring" type="button">Refresh</button>
+            </div>
+            <div id="monitoring-info" class="monitoring-info"></div>
+          </section>
+
+          <section class="admin-section">
+            <div class="history-header">
+              <h3>Search history</h3>
+              <button id="clear-parent-history" type="button">Clear history</button>
+            </div>
+            <div id="parent-history-info" class="history-empty"></div>
+          </section>
+
+          <section class="admin-section">
+            <div class="history-header">
+              <h3>Debug terminal</h3>
+            </div>
+            <div class="debug-actions">
+              <button id="exit-to-terminal" class="danger-button" type="button">Exit to terminal</button>
+              <button id="return-to-kiosk" type="button">Return to kiosk</button>
+            </div>
+            <p class="history-empty">Terminal mode opens tty1 login. Use remote admin or terminal command to return.</p>
+          </section>
+
+          <div class="history-header">
+            <h3>Website whitelist</h3>
+          </div>
+          <div id="site-list" class="admin-list"></div>
+          <form id="site-form" class="admin-form">
+            <input id="site-label" type="text" placeholder="Label" readonly data-keyboard="text">
+            <input id="site-domain" type="text" placeholder="domain.com" readonly data-keyboard="text">
+            <input id="site-url" type="text" placeholder="https://domain.com/" readonly data-keyboard="text">
+            <button type="submit">Add</button>
+          </form>
+
+          <section class="admin-section">
+            <h3>Time and YouTube filters</h3>
+            <div class="filter-settings-grid">
+              <label>
+                Daily limit, minutes
+                <input id="daily-minutes" type="text" inputmode="numeric" readonly data-keyboard="numeric">
+              </label>
+              <label>
+                Unrestricted mode, minutes
+                <input id="unrestricted-minutes" type="text" inputmode="numeric" readonly data-keyboard="numeric">
+              </label>
+              <label>
+                Max video duration, seconds
+                <input id="max-duration-seconds" type="text" inputmode="numeric" readonly data-keyboard="numeric">
+              </label>
+              <label>
+                YouTube max results
+                <input id="youtube-max-results" type="text" inputmode="numeric" readonly data-keyboard="numeric">
+              </label>
+              <label>
+                YouTube safe search
+                <input id="youtube-safe-search" type="text" placeholder="strict" readonly data-keyboard="text">
+              </label>
+              <label>
+                YouTube region
+                <input id="youtube-region-code" type="text" placeholder="US" readonly data-keyboard="text">
+              </label>
+              <label>
+                Unknown videos
+                <input id="default-decision" type="text" placeholder="REQUIRE_PARENT_APPROVAL" readonly data-keyboard="text">
+              </label>
+              <label>
+                Viewing PIN
+                <input id="view-pin" type="password" inputmode="numeric" placeholder="leave blank to keep" readonly data-keyboard="numeric">
+              </label>
+            </div>
+          </section>
+
+          <div class="admin-grid">
+            <section class="admin-section">
+              <h3>Allowed keywords</h3>
+              <div id="allowed-keywords" class="admin-list"></div>
+              <form class="admin-form compact" data-list-form="allowed_keywords">
+                <input type="text" placeholder="keyword" readonly data-keyboard="text">
+                <button type="submit">Add</button>
+              </form>
+            </section>
+            <section class="admin-section">
+              <h3>Blocked keywords</h3>
+              <div id="blocked-keywords" class="admin-list"></div>
+              <form class="admin-form compact" data-list-form="blocked_keywords">
+                <input type="text" placeholder="keyword" readonly data-keyboard="text">
+                <button type="submit">Add</button>
+              </form>
+            </section>
+            <section class="admin-section">
+              <h3>Parent approval keywords</h3>
+              <div id="approval-keywords" class="admin-list"></div>
+              <form class="admin-form compact" data-list-form="approval_keywords">
+                <input type="text" placeholder="keyword" readonly data-keyboard="text">
+                <button type="submit">Add</button>
+              </form>
+            </section>
+            <section class="admin-section">
+              <h3>Allowed channels</h3>
+              <div id="allowed-channels" class="admin-list"></div>
+              <form class="admin-form compact" data-list-form="allowed_channels">
+                <input type="text" placeholder="channel name or id" readonly data-keyboard="text">
+                <button type="submit">Add</button>
+              </form>
+            </section>
+            <section class="admin-section">
+              <h3>Blocked channels</h3>
+              <div id="blocked-channels" class="admin-list"></div>
+              <form class="admin-form compact" data-list-form="blocked_channels">
+                <input type="text" placeholder="channel name or id" readonly data-keyboard="text">
+                <button type="submit">Add</button>
+              </form>
+            </section>
+            <section class="admin-section">
+              <h3>Blocked categories</h3>
+              <div id="blocked-categories" class="admin-list"></div>
+              <form class="admin-form compact" data-list-form="blocked_categories">
+                <input type="text" placeholder="category id or name" readonly data-keyboard="text">
+                <button type="submit">Add</button>
+              </form>
+            </section>
+          </div>
+          <div class="settings-actions">
+            <button id="save-config" type="button">Save rules</button>
+          </div>
+        </section>
+      </section>
+    </main>
+    <section id="keyboard" class="keyboard" aria-label="On-screen keyboard" hidden>
+      <div class="keyboard-preview" id="keyboard-preview"></div>
+      <div id="keyboard-keys" class="keyboard-keys"></div>
+    </section>
+    <script src="/static/app.js?v=20260712-13"></script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+[Unit]
+Description=Kid Portal FastAPI service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/opt/kid-portal
+Environment=KID_PORTAL_CONFIG=/etc/kid-portal/config.json
+EnvironmentFile=-/etc/kid-portal/youtube.env
+ExecStart=/opt/kid-portal/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
