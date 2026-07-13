@@ -1,16 +1,6 @@
 {
   "allowed_sites": [
     {
-      "domain": "wikipedia.org",
-      "label": "Wikipedia",
-      "url": "https://www.wikipedia.org/"
-    },
-    {
-      "domain": "khanacademy.org",
-      "label": "Khan Academy",
-      "url": "https://www.khanacademy.org/"
-    },
-    {
       "domain": "disneyplus.com",
       "label": "Disney+",
       "url": "https://www.disneyplus.com/"

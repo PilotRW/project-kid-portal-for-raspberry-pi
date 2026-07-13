@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kid Portal</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260712-15">
+    <link rel="stylesheet" href="/static/styles.css?v=20260713-01">
   </head>
   <body>
     <main class="shell">
@@ -29,7 +29,7 @@
           <span id="youtube-mode" class="mode-badge">demo</span>
         </header>
         <form id="youtube-search" class="search-row">
-          <input id="youtube-query" type="search" placeholder="Search safe videos" autocomplete="off" readonly data-keyboard="text">
+          <input id="youtube-query" type="search" placeholder="Search safe videos" autocomplete="off" data-keyboard="text">
           <button type="submit">OK</button>
         </form>
         <section class="history-panel" aria-label="Search history">
@@ -46,7 +46,7 @@
             <p id="view-approval-title"></p>
           </div>
           <form id="view-approval-form" class="approval-form">
-            <input id="view-approval-pin" type="password" inputmode="numeric" placeholder="Viewing PIN" readonly data-keyboard="numeric">
+            <input id="view-approval-pin" type="password" inputmode="numeric" placeholder="Viewing PIN" data-keyboard="numeric">
             <button type="submit">Watch</button>
             <button id="cancel-view-approval" type="button" class="secondary-button">Cancel</button>
           </form>
@@ -68,7 +68,7 @@
           <div id="network-info" class="network-info"></div>
         </section>
         <form id="pin-form" class="pin-panel">
-          <input id="pin" type="password" inputmode="numeric" placeholder="PIN" readonly data-keyboard="numeric">
+          <input id="pin" type="password" inputmode="numeric" placeholder="PIN" data-keyboard="numeric">
           <button type="submit">Unlock</button>
         </form>
         <div id="settings-status" class="status"></div>
@@ -121,9 +121,9 @@
           </div>
           <div id="site-list" class="admin-list"></div>
           <form id="site-form" class="admin-form">
-            <input id="site-label" type="text" placeholder="Label" readonly data-keyboard="text">
-            <input id="site-domain" type="text" placeholder="domain.com" readonly data-keyboard="text">
-            <input id="site-url" type="text" placeholder="https://domain.com/" readonly data-keyboard="text">
+            <input id="site-label" type="text" placeholder="Label" data-keyboard="text">
+            <input id="site-domain" type="text" placeholder="domain.com" data-keyboard="text">
+            <input id="site-url" type="text" placeholder="https://domain.com/" data-keyboard="text">
             <button type="submit">Add</button>
           </form>
 
@@ -132,35 +132,35 @@
             <div class="filter-settings-grid">
               <label>
                 Daily limit, minutes
-                <input id="daily-minutes" type="text" inputmode="numeric" readonly data-keyboard="numeric">
+                <input id="daily-minutes" type="text" inputmode="numeric" data-keyboard="numeric">
               </label>
               <label>
                 Unrestricted mode, minutes
-                <input id="unrestricted-minutes" type="text" inputmode="numeric" readonly data-keyboard="numeric">
+                <input id="unrestricted-minutes" type="text" inputmode="numeric" data-keyboard="numeric">
               </label>
               <label>
                 Max video duration, seconds
-                <input id="max-duration-seconds" type="text" inputmode="numeric" readonly data-keyboard="numeric">
+                <input id="max-duration-seconds" type="text" inputmode="numeric" data-keyboard="numeric">
               </label>
               <label>
                 YouTube max results
-                <input id="youtube-max-results" type="text" inputmode="numeric" readonly data-keyboard="numeric">
+                <input id="youtube-max-results" type="text" inputmode="numeric" data-keyboard="numeric">
               </label>
               <label>
                 YouTube safe search
-                <input id="youtube-safe-search" type="text" placeholder="strict" readonly data-keyboard="text">
+                <input id="youtube-safe-search" type="text" placeholder="strict" data-keyboard="text">
               </label>
               <label>
                 YouTube region
-                <input id="youtube-region-code" type="text" placeholder="US" readonly data-keyboard="text">
+                <input id="youtube-region-code" type="text" placeholder="US" data-keyboard="text">
               </label>
               <label>
                 Unknown videos
-                <input id="default-decision" type="text" placeholder="REQUIRE_PARENT_APPROVAL" readonly data-keyboard="text">
+                <input id="default-decision" type="text" placeholder="REQUIRE_PARENT_APPROVAL" data-keyboard="text">
               </label>
               <label>
                 Viewing PIN
-                <input id="view-pin" type="password" inputmode="numeric" placeholder="leave blank to keep" readonly data-keyboard="numeric">
+                <input id="view-pin" type="password" inputmode="numeric" placeholder="leave blank to keep" data-keyboard="numeric">
               </label>
             </div>
           </section>
@@ -170,7 +170,7 @@
               <h3>Allowed keywords</h3>
               <div id="allowed-keywords" class="admin-list"></div>
               <form class="admin-form compact" data-list-form="allowed_keywords">
-                <input type="text" placeholder="keyword" readonly data-keyboard="text">
+                <input type="text" placeholder="keyword" data-keyboard="text">
                 <button type="submit">Add</button>
               </form>
             </section>
@@ -178,7 +178,7 @@
               <h3>Blocked keywords</h3>
               <div id="blocked-keywords" class="admin-list"></div>
               <form class="admin-form compact" data-list-form="blocked_keywords">
-                <input type="text" placeholder="keyword" readonly data-keyboard="text">
+                <input type="text" placeholder="keyword" data-keyboard="text">
                 <button type="submit">Add</button>
               </form>
             </section>
@@ -186,7 +186,7 @@
               <h3>Parent approval keywords</h3>
               <div id="approval-keywords" class="admin-list"></div>
               <form class="admin-form compact" data-list-form="approval_keywords">
-                <input type="text" placeholder="keyword" readonly data-keyboard="text">
+                <input type="text" placeholder="keyword" data-keyboard="text">
                 <button type="submit">Add</button>
               </form>
             </section>
@@ -194,7 +194,7 @@
               <h3>Allowed channels</h3>
               <div id="allowed-channels" class="admin-list"></div>
               <form class="admin-form compact" data-list-form="allowed_channels">
-                <input type="text" placeholder="channel name or id" readonly data-keyboard="text">
+                <input type="text" placeholder="channel name or id" data-keyboard="text">
                 <button type="submit">Add</button>
               </form>
             </section>
@@ -202,7 +202,7 @@
               <h3>Blocked channels</h3>
               <div id="blocked-channels" class="admin-list"></div>
               <form class="admin-form compact" data-list-form="blocked_channels">
-                <input type="text" placeholder="channel name or id" readonly data-keyboard="text">
+                <input type="text" placeholder="channel name or id" data-keyboard="text">
                 <button type="submit">Add</button>
               </form>
             </section>
@@ -210,7 +210,7 @@
               <h3>Blocked categories</h3>
               <div id="blocked-categories" class="admin-list"></div>
               <form class="admin-form compact" data-list-form="blocked_categories">
-                <input type="text" placeholder="category id or name" readonly data-keyboard="text">
+                <input type="text" placeholder="category id or name" data-keyboard="text">
                 <button type="submit">Add</button>
               </form>
             </section>
@@ -225,6 +225,6 @@
       <div class="keyboard-preview" id="keyboard-preview"></div>
       <div id="keyboard-keys" class="keyboard-keys"></div>
     </section>
-    <script src="/static/app.js?v=20260712-15"></script>
+    <script src="/static/app.js?v=20260713-01"></script>
   </body>
 </html>

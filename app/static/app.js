@@ -756,6 +756,34 @@ function pressKeyboardKey(key) {
 }
 
 document.addEventListener("keydown", (event) => {
+  const targetElement = event.target;
+  const isTextInput = targetElement instanceof HTMLInputElement || targetElement instanceof HTMLTextAreaElement;
+  const isKeyboardOpen = !document.querySelector("#keyboard").hidden;
+  if (isTextInput && !event.altKey && !event.ctrlKey && !event.metaKey) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (isKeyboardOpen) {
+        hideKeyboard();
+        refreshFocus();
+      } else {
+        targetElement.blur();
+        refreshFocus();
+      }
+      return;
+    }
+    if (isKeyboardOpen && ["ArrowRight", "ArrowDown"].includes(event.key)) {
+      event.preventDefault();
+      moveFocus(1);
+      return;
+    }
+    if (isKeyboardOpen && ["ArrowLeft", "ArrowUp"].includes(event.key)) {
+      event.preventDefault();
+      moveFocus(-1);
+      return;
+    }
+    return;
+  }
+
   if (["ArrowRight", "ArrowDown"].includes(event.key)) {
     event.preventDefault();
     moveFocus(1);
@@ -788,6 +816,7 @@ document.addEventListener("keydown", (event) => {
 document.querySelectorAll("[data-keyboard]").forEach((input) => {
   input.addEventListener("focus", () => showKeyboard(input));
   input.addEventListener("click", () => showKeyboard(input));
+  input.addEventListener("input", renderKeyboard);
 });
 document.querySelectorAll("[data-back]").forEach((button) => {
   button.addEventListener("click", () => showView("home"));
