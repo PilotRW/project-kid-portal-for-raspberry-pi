@@ -235,26 +235,39 @@ function renderConfigList(field, selector) {
   const list = document.querySelector(selector);
   list.innerHTML = "";
   const values = adminState.config.filtering[field];
-  if (!values.length) {
+  const count = document.querySelector(`[data-rule-count="${field}"]`);
+  if (count) count.textContent = String(values.length);
+  const filter = document.querySelector(`[data-rule-filter="${field}"]`)?.value.trim().toLowerCase() || "";
+  const visibleValues = values
+    .map((value, index) => ({ value, index }))
+    .filter((item) => !filter || item.value.toLowerCase().includes(filter));
+  if (!visibleValues.length) {
     list.innerHTML = '<p class="empty">Empty.</p>';
     return;
   }
-  values.forEach((value, index) => {
+  visibleValues.forEach(({ value, index }) => {
     const card = document.createElement("article");
-    card.className = "item-card";
+    card.className = "item-card rule-chip";
     card.innerHTML = `
       <strong>${escapeHtml(value)}</strong>
-      <button type="button" data-remove-field="${field}" data-remove-index="${index}">Remove</button>
+      <button type="button" aria-label="Remove ${escapeHtml(value)}" data-remove-field="${field}" data-remove-index="${index}">x</button>
     `;
     list.appendChild(card);
   });
 }
 
-function addUniqueConfigValue(field, value) {
-  const normalized = value.trim();
-  if (!normalized) return;
+function splitRuleInput(value) {
+  return value
+    .split(/[\n,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function addUniqueConfigValues(field, value) {
   const list = adminState.config.filtering[field];
-  if (!list.some((item) => item.toLowerCase() === normalized.toLowerCase())) list.push(normalized);
+  splitRuleInput(value).forEach((normalized) => {
+    if (!list.some((item) => item.toLowerCase() === normalized.toLowerCase())) list.push(normalized);
+  });
 }
 
 function clampInteger(selector, min, max, fallback) {
@@ -407,9 +420,15 @@ document.querySelectorAll("[data-list-form]").forEach((form) => {
     event.preventDefault();
     if (!adminState.config) return;
     const input = form.querySelector("input");
-    addUniqueConfigValue(form.dataset.listForm, input.value);
+    addUniqueConfigValues(form.dataset.listForm, input.value);
     input.value = "";
     renderConfigList(form.dataset.listForm, `#${form.closest(".rule-panel").querySelector(".item-list").id}`);
+  });
+});
+
+document.querySelectorAll("[data-rule-filter]").forEach((input) => {
+  input.addEventListener("input", () => {
+    renderConfigList(input.dataset.ruleFilter, `#${input.closest(".rule-panel").querySelector(".item-list").id}`);
   });
 });
 

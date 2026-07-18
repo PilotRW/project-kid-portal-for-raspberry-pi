@@ -322,7 +322,99 @@ select {
 }
 
 .site-form { grid-template-columns: 1fr 1fr 1.4fr auto; }
-.rule-panel { margin-bottom: 0; }
+.rule-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-bottom: 0;
+}
+
+.rule-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rule-heading h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.rule-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(243, 200, 91, 0.18);
+  color: #f3c85b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rule-search {
+  min-height: 32px;
+  margin-top: 10px;
+  padding: 0 9px;
+  font-size: 13px;
+}
+
+.rule-panel .inline-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 8px;
+}
+
+.rule-panel .inline-form input {
+  min-height: 32px;
+  font-size: 13px;
+}
+
+.rule-panel .inline-form button {
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+.rule-panel .item-list {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  align-content: start;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.rule-chip {
+  min-height: 30px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 5px 6px 5px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.rule-chip strong {
+  overflow: hidden;
+  color: #edf5f1;
+  font-size: 13px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rule-chip button {
+  grid-row: auto;
+  width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(237, 245, 241, 0.11);
+  color: #dce9e3;
+  font-size: 13px;
+}
+
+.rule-chip button:hover {
+  background: #d76c6c;
+  color: #101614;
+}
 
 .status {
   min-height: 22px;

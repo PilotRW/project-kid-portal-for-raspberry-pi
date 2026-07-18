@@ -130,8 +130,10 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "lock-admin" not in response.text
     assert "content-lan-toggle" in response.text
     assert "content-lan-url" in response.text
-    assert "admin.css?v=20260712-08" in response.text
-    assert "admin.js?v=20260712-09" in response.text
+    assert "data-rule-filter=\"blocked_keywords\"" in response.text
+    assert "data-rule-count=\"blocked_keywords\"" in response.text
+    assert "admin.css?v=20260715-01" in response.text
+    assert "admin.js?v=20260715-01" in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kid Portal Admin</title>
-    <link rel="stylesheet" href="/static/admin.css?v=20260712-08" />
+    <link rel="stylesheet" href="/static/admin.css?v=20260715-01" />
   </head>
   <body>
     <main class="admin-shell">
@@ -182,54 +182,78 @@
 
           <section class="rules-grid">
             <article class="panel rule-panel">
-              <h2>Allowed Keywords</h2>
+              <div class="rule-heading">
+                <h2>Allowed Keywords</h2>
+                <span class="rule-count" data-rule-count="allowed_keywords">0</span>
+              </div>
+              <input class="rule-search" data-rule-filter="allowed_keywords" placeholder="Filter list" />
               <form class="inline-form" data-list-form="allowed_keywords">
-                <input placeholder="keyword" />
+                <input placeholder="keyword, comma, or newline list" />
                 <button type="submit">Add</button>
               </form>
               <div id="allowed-keywords" class="item-list compact"></div>
             </article>
 
             <article class="panel rule-panel">
-              <h2>Blocked Keywords</h2>
+              <div class="rule-heading">
+                <h2>Blocked Keywords</h2>
+                <span class="rule-count" data-rule-count="blocked_keywords">0</span>
+              </div>
+              <input class="rule-search" data-rule-filter="blocked_keywords" placeholder="Filter list" />
               <form class="inline-form" data-list-form="blocked_keywords">
-                <input placeholder="keyword" />
+                <input placeholder="keyword, comma, or newline list" />
                 <button type="submit">Add</button>
               </form>
               <div id="blocked-keywords" class="item-list compact"></div>
             </article>
 
             <article class="panel rule-panel">
-              <h2>Parent Approval Keywords</h2>
+              <div class="rule-heading">
+                <h2>Parent Approval Keywords</h2>
+                <span class="rule-count" data-rule-count="approval_keywords">0</span>
+              </div>
+              <input class="rule-search" data-rule-filter="approval_keywords" placeholder="Filter list" />
               <form class="inline-form" data-list-form="approval_keywords">
-                <input placeholder="keyword" />
+                <input placeholder="keyword, comma, or newline list" />
                 <button type="submit">Add</button>
               </form>
               <div id="approval-keywords" class="item-list compact"></div>
             </article>
 
             <article class="panel rule-panel">
-              <h2>Allowed Channels</h2>
+              <div class="rule-heading">
+                <h2>Allowed Channels</h2>
+                <span class="rule-count" data-rule-count="allowed_channels">0</span>
+              </div>
+              <input class="rule-search" data-rule-filter="allowed_channels" placeholder="Filter list" />
               <form class="inline-form" data-list-form="allowed_channels">
-                <input placeholder="channel" />
+                <input placeholder="channel, comma, or newline list" />
                 <button type="submit">Add</button>
               </form>
               <div id="allowed-channels" class="item-list compact"></div>
             </article>
 
             <article class="panel rule-panel">
-              <h2>Blocked Channels</h2>
+              <div class="rule-heading">
+                <h2>Blocked Channels</h2>
+                <span class="rule-count" data-rule-count="blocked_channels">0</span>
+              </div>
+              <input class="rule-search" data-rule-filter="blocked_channels" placeholder="Filter list" />
               <form class="inline-form" data-list-form="blocked_channels">
-                <input placeholder="channel" />
+                <input placeholder="channel, comma, or newline list" />
                 <button type="submit">Add</button>
               </form>
               <div id="blocked-channels" class="item-list compact"></div>
             </article>
 
             <article class="panel rule-panel">
-              <h2>Blocked Categories</h2>
+              <div class="rule-heading">
+                <h2>Blocked Categories</h2>
+                <span class="rule-count" data-rule-count="blocked_categories">0</span>
+              </div>
+              <input class="rule-search" data-rule-filter="blocked_categories" placeholder="Filter list" />
               <form class="inline-form" data-list-form="blocked_categories">
-                <input placeholder="category id or name" />
+                <input placeholder="category id/name, comma, or newline list" />
                 <button type="submit">Add</button>
               </form>
               <div id="blocked-categories" class="item-list compact"></div>
@@ -271,6 +295,6 @@
         </section>
       </section>
     </main>
-    <script src="/static/admin.js?v=20260712-09"></script>
+    <script src="/static/admin.js?v=20260715-01"></script>
   </body>
 </html>
