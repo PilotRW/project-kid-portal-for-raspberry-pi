@@ -249,7 +249,7 @@ async function loadSearchHistory() {
       button.type = "button";
       button.className = "history-chip";
       button.setAttribute("aria-label", `${item.query}, ${item.mode}, ${item.result_count} results`);
-      button.innerHTML = `${escapeHtml(item.query)} <small>${escapeHtml(item.mode)} - ${item.result_count} results</small>`;
+      button.innerHTML = `<span>${escapeHtml(item.query)}</span><small>${escapeHtml(item.mode)} - ${item.result_count} results</small>`;
       button.addEventListener("click", () => runHistorySearch(item.query));
       container.appendChild(button);
     });

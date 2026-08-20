@@ -108,10 +108,13 @@ install -m 755 deploy/scripts/kid-portal-network-access.sh /usr/local/sbin/kid-p
 install -m 755 deploy/scripts/kid-portal-display-mode.sh /usr/local/sbin/kid-portal-display-mode
 install -m 755 deploy/scripts/kid-portal-wifi.sh /usr/local/sbin/kid-portal-wifi
 install -m 755 deploy/scripts/kid-portal-youtube-key.sh /usr/local/sbin/kid-portal-youtube-key
+install -m 755 deploy/scripts/kid-portal-software-update.sh /usr/local/sbin/kid-portal-software-update
 install -m 440 deploy/sudoers/kid-portal-wifi /etc/sudoers.d/kid-portal-wifi
 install -m 440 deploy/sudoers/kid-portal-youtube-key /etc/sudoers.d/kid-portal-youtube-key
+install -m 440 deploy/sudoers/kid-portal-software-update /etc/sudoers.d/kid-portal-software-update
 visudo -cf /etc/sudoers.d/kid-portal-wifi
 visudo -cf /etc/sudoers.d/kid-portal-youtube-key
+visudo -cf /etc/sudoers.d/kid-portal-software-update
 
 install -m 644 deploy/xorg/99-kid-portal.conf /etc/X11/xorg.conf.d/99-kid-portal.conf
 install -m 644 deploy/input/keyd-kid-portal.conf /etc/keyd/default.conf

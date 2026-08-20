@@ -135,6 +135,8 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "tab-nav" in response.text
     assert "Blocked Categories" in response.text
     assert "Debug Terminal" in response.text
+    assert "Raspberry Pi Software" in response.text
+    assert "update-system-software" in response.text
     assert "Display" in response.text
     assert "display-mode" in response.text
     assert "Sign out" in response.text
@@ -144,7 +146,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "data-rule-filter=\"blocked_keywords\"" in response.text
     assert "data-rule-count=\"blocked_keywords\"" in response.text
     assert "admin.css?v=20260715-01" in response.text
-    assert "admin.js?v=20260820-02" in response.text
+    assert "admin.js?v=20260820-03" in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):
@@ -209,6 +211,24 @@ def test_display_update_rejects_unknown_mode():
     response = client.post("/api/parent/display", json={"pin": "1234", "mode": "720p"})
 
     assert response.status_code == 400
+
+
+def test_software_update_requires_valid_pin(monkeypatch):
+    called = []
+
+    def fake_update():
+        called.append(True)
+
+    monkeypatch.setattr(main_module, "run_software_update", fake_update)
+    client = TestClient(app)
+
+    rejected = client.post("/api/parent/software/update", json={"pin": "0000"})
+    accepted = client.post("/api/parent/software/update", json={"pin": "1234"})
+
+    assert rejected.status_code == 403
+    assert accepted.status_code == 200
+    assert accepted.json()["status"] == "software_update_started"
+    assert called == [True]
 
 
 def test_youtube_key_update_requires_valid_pin():

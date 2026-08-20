@@ -139,6 +139,7 @@ ADMIN_SURFACE_ALLOWED_PATHS = {
     "/api/parent/monitoring",
     "/api/parent/terminal/start",
     "/api/parent/kiosk/start",
+    "/api/parent/software/update",
 }
 ADMIN_SURFACE_ALLOWED_PREFIXES = ("/static/admin.",)
 
@@ -227,6 +228,10 @@ def get_config() -> PortalConfig:
 def run_systemctl_sequence(commands: list[list[str]]) -> None:
     for command in commands:
         subprocess.run(command, check=True, timeout=30)
+
+
+def run_software_update() -> None:
+    subprocess.run(["sudo", "-n", "/usr/local/sbin/kid-portal-software-update"], check=True, timeout=7200)
 
 
 def read_storage_info() -> StorageInfo:
@@ -627,6 +632,13 @@ async def return_to_kiosk(request: ParentPinRequest, http_request: Request, back
         ],
     )
     return SystemActionResult(status="kiosk_starting")
+
+
+@app.post("/api/parent/software/update")
+async def update_system_software(request: ParentPinRequest, http_request: Request, background_tasks: BackgroundTasks) -> SystemActionResult:
+    verify_parent_pin(request.pin, http_request)
+    background_tasks.add_task(run_software_update)
+    return SystemActionResult(status="software_update_started")
 
 
 @app.get("/youtube/watch/{video_id}", response_class=HTMLResponse)

@@ -350,6 +350,22 @@ async function returnToKiosk() {
   }
 }
 
+async function updateSystemSoftware() {
+  const button = document.querySelector("#update-system-software");
+  const confirmed = window.confirm("Run Raspberry Pi software update now? This can take several minutes.");
+  if (!confirmed) return;
+  button.disabled = true;
+  saveStatus.textContent = "Starting Raspberry Pi software update...";
+  try {
+    await postJson("/api/parent/software/update", { pin: adminState.pin });
+    saveStatus.textContent = "Software update started. Keep the Pi powered on.";
+  } catch (error) {
+    saveStatus.textContent = error.message || "Software update failed to start.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function applyDisplayMode() {
   const mode = document.querySelector("#display-mode").value;
   saveStatus.textContent = `Switching display to ${mode}...`;
@@ -456,6 +472,7 @@ signOutButton.addEventListener("click", lockAdmin);
 document.querySelector("#save-config").addEventListener("click", saveConfig);
 document.querySelector("#exit-to-terminal").addEventListener("click", startTerminalMode);
 document.querySelector("#return-to-kiosk").addEventListener("click", returnToKiosk);
+document.querySelector("#update-system-software").addEventListener("click", updateSystemSoftware);
 document.querySelector("#apply-display-mode").addEventListener("click", applyDisplayMode);
 document.querySelector("#youtube-key-form").addEventListener("submit", saveYouTubeKey);
 document.querySelector("#clear-youtube-key").addEventListener("click", clearYouTubeKey);

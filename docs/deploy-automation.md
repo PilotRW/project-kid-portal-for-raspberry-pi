@@ -59,7 +59,21 @@ It checks:
 - SSH hardening drop-in;
 - UFW rules for LAN-only SSH/admin;
 - keyd input hardening;
-- narrow sudoers helpers for Wi-Fi and YouTube API key management.
+- narrow sudoers helpers for Wi-Fi, YouTube API key management, and system software updates.
+
+## Raspberry Pi Software Updates
+
+Open admin, then use:
+
+```text
+Debug -> Raspberry Pi Software -> Update software
+```
+
+This starts `apt-get update`, `apt-get -y full-upgrade`, and `apt-get -y autoremove` in the background on the Pi. Output is written to:
+
+```text
+/var/log/kid-portal-software-update.log
+```
 
 ## YouTube API Key
 
