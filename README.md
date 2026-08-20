@@ -4,13 +4,21 @@ A Raspberry Pi family media kiosk focused on safe web browsing and curated YouTu
 
 The POC boots into Chromium kiosk mode pointed at a local FastAPI app. The browser is locked down with Chromium Enterprise Policies, while YouTube is accessed through a custom frontend backed by the YouTube Data API and a configurable filtering engine.
 
+## Current State
+
+The current validated device is a Raspberry Pi 5 B 8 GB running Raspberry Pi OS Lite 64-bit. It boots directly into the kiosk on HDMI, serves the parent admin UI on LAN port `80`, keeps the content app on local port `8080` by default, and exposes only SSH/admin on the LAN firewall.
+
+Raspberry Pi 4 should remain compatible with the same architecture, but should be validated before treating it as production hardware. Raspberry Pi Zero 2 W is not a recommended target for the full Chromium + YouTube kiosk experience; it may run a reduced/minimal build, but the project should not promise smooth video playback, 4K output, or comfortable admin/kiosk performance on Zero-class hardware.
+
 ## Components
 
 - `app/main.py` - FastAPI application and API routes.
 - `app/services/config_service.py` - JSON/YAML configuration loading and saving.
 - `app/services/filtering_engine.py` - ALLOW/BLOCK/REQUIRE_PARENT_APPROVAL decision pipeline.
+- `app/services/filter_insights.py` - bounded aggregated filter gap and parent approval counters.
 - `app/services/policy_manager.py` - Chromium Enterprise Policy JSON generation.
 - `app/services/usage_tracker.py` - daily viewing limit tracking based on active YouTube playback.
+- `app/services/youtube_approval_log.py` - bounded parent approval audit trail.
 - `app/services/youtube_api.py` - YouTube Data API adapter.
 - `app/static/` - TV-friendly kiosk UI controlled by arrow keys, OK, and Back/Escape.
 - `deploy/systemd/` - systemd units for kiosk app, LAN admin, firewall toggle helper, and Chromium launcher.
@@ -41,8 +49,9 @@ The admin page is PIN protected and split into tabs for overview, network, playb
 - viewing storage, top CPU processes, temperature, and throttling state;
 - checking YouTube live/demo status;
 - viewing and clearing YouTube search history;
+- reviewing parent approval logs and aggregated unmatched/default-allow filter gaps;
 - changing the separate viewing approval PIN;
-- configuring daily playback limits and max video duration;
+- configuring daily playback limits, max video duration, and short-video handling;
 - editing allowed websites;
 - editing allowed/blocked keywords, channels, approval keywords, and blocked categories;
 - opening a debug terminal on the HDMI display and returning to kiosk mode.
@@ -70,6 +79,10 @@ YouTube search history is stored as JSON. By default it uses `config/search-hist
 
 YouTube API search responses are cached for 7 days by default to avoid burning the small daily `search.list` quota on repeated searches. Local cache defaults to `config/youtube-search-cache.json`; on the Pi set `KID_PORTAL_YOUTUBE_SEARCH_CACHE=/etc/kid-portal/youtube-search-cache.json`. Override the TTL with `KID_PORTAL_YOUTUBE_SEARCH_CACHE_TTL_SECONDS`.
 
+Parent-approved YouTube videos are recorded in a bounded audit log. Local storage defaults to `config/youtube-approval-log.json`; on the Pi set `KID_PORTAL_YOUTUBE_APPROVAL_LOG=/etc/kid-portal/youtube-approval-log.json`.
+
+Filter tuning insights are stored as a bounded, deduplicated counter map instead of an append-only event log. It records default-allow gaps and repeated viewing PIN approvals by channel/title with counts. Local storage defaults to `config/filter-insights.json`; on the Pi set `KID_PORTAL_FILTER_INSIGHTS=/etc/kid-portal/filter-insights.json`.
+
 Daily viewing limits count active YouTube playback, not kiosk uptime. The local default storage path is `config/usage.json`; on the Pi you can set `KID_PORTAL_USAGE=/etc/kid-portal/usage.json`.
 
 No allowlists, blocklists, PINs, or time limits are hardcoded in the app.
@@ -88,4 +101,4 @@ For repeatable installs and updates, use [docs/deploy-automation.md](/Users/pilo
 
 Security posture and production checks are tracked in [docs/security.md](/Users/pilotrw/GITHUB/project-kid-portal-for-raspberry-pi/docs/security.md).
 
-The deployment design targets Raspberry Pi OS Lite 64-bit, Raspberry Pi Zero 2 W, and remains compatible with Raspberry Pi 4/5.
+The deployment design targets Raspberry Pi OS Lite 64-bit on Raspberry Pi 5 first, with Raspberry Pi 4 compatibility intended. Raspberry Pi Zero 2 W is architecture-compatible only in the sense that the same services/scripts do not depend on Pi 5-specific APIs; it is not a validated or recommended performance target for the full kiosk.

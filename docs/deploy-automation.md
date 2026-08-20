@@ -2,6 +2,8 @@
 
 These scripts turn a freshly imaged Raspberry Pi OS Lite device into a Kid Portal kiosk without repeating manual setup.
 
+Validated hardware today is Raspberry Pi 5 B 8 GB. Raspberry Pi 4 is expected to remain compatible with the same scripts, but needs validation on real hardware. Raspberry Pi Zero 2 W is not recommended for the full Chromium + YouTube kiosk and should be treated as experimental/minimal.
+
 ## First Device Bootstrap
 
 Prerequisites:

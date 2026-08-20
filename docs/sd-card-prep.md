@@ -6,7 +6,9 @@
 
 ## 1. Що потрібно
 
-- Raspberry Pi Zero 2 W, Raspberry Pi 4 або Raspberry Pi 5.
+- Raspberry Pi 5 рекомендовано для поточного повного кіоску.
+- Raspberry Pi 4 має бути сумісною ціллю, але її треба окремо перевірити.
+- Raspberry Pi Zero 2 W не варто обіцяти як повноцінну ціль для Chromium + YouTube kiosk; максимум експериментальний/minimal режим.
 - microSD 16 GB або більше, краще 32 GB.
 - Кардрідер.
 - Комп'ютер з macOS, Windows або Linux.

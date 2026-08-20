@@ -1,6 +1,6 @@
 # Raspberry Pi Setup
 
-Target: Raspberry Pi OS Lite 64-bit on Raspberry Pi Zero 2 W, Pi 4, or Pi 5.
+Target: Raspberry Pi OS Lite 64-bit on Raspberry Pi 5. Raspberry Pi 4 should remain compatible but should be validated before production use. Raspberry Pi Zero 2 W is not recommended for the full Chromium + YouTube kiosk; treat it as an experimental/minimal target only.
 
 Before this step, prepare the microSD card and first boot:
 
@@ -38,6 +38,9 @@ sudo chown pi:pi /etc/kid-portal/search-history.json
 sudo touch /etc/kid-portal/youtube-search-cache.json
 sudo chown pi:pi /etc/kid-portal/youtube-search-cache.json
 sudo chmod 600 /etc/kid-portal/youtube-search-cache.json
+sudo touch /etc/kid-portal/youtube-approval-log.json /etc/kid-portal/filter-insights.json /etc/kid-portal/usage.json
+sudo chown pi:pi /etc/kid-portal/youtube-approval-log.json /etc/kid-portal/filter-insights.json /etc/kid-portal/usage.json
+sudo chmod 600 /etc/kid-portal/youtube-approval-log.json /etc/kid-portal/filter-insights.json /etc/kid-portal/usage.json
 ```
 
 Optional YouTube API key:
@@ -48,6 +51,9 @@ sudo tee /etc/kid-portal/youtube.env >/dev/null <<EOF
 YOUTUBE_API_KEY_FILE=/etc/kid-portal/youtube-api-key.txt
 KID_PORTAL_SEARCH_HISTORY=/etc/kid-portal/search-history.json
 KID_PORTAL_YOUTUBE_SEARCH_CACHE=/etc/kid-portal/youtube-search-cache.json
+KID_PORTAL_YOUTUBE_APPROVAL_LOG=/etc/kid-portal/youtube-approval-log.json
+KID_PORTAL_FILTER_INSIGHTS=/etc/kid-portal/filter-insights.json
+KID_PORTAL_USAGE=/etc/kid-portal/usage.json
 EOF
 sudo chmod 600 /etc/kid-portal/youtube.env
 ```
@@ -129,4 +135,3 @@ sudo systemctl enable --now keyd
 - Persist and enforce real temporary unrestricted mode timeout.
 - Add browsing history storage.
 - Add AI classification module behind the filtering engine.
-- Add input-layer shortcut blocking with `interception-tools`, `keyd`, or a remote-only input profile.
