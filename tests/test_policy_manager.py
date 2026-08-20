@@ -9,6 +9,7 @@ def test_youtube_default_result_count_is_twenty():
 def test_policy_blocks_by_default_and_allows_configured_sites():
     config = PortalConfig(
         allowed_sites=[SiteConfig(label="Wiki", url="https://www.wikipedia.org/", domain="wikipedia.org")],
+        web_allowlist=["media.example.org"],
         parent=ParentConfig(pin_sha256="x"),
     )
     policy = PolicyManager(config).build_policy()
@@ -18,6 +19,8 @@ def test_policy_blocks_by_default_and_allows_configured_sites():
     assert "https://wikipedia.org/*" in policy["URLAllowlist"]
     assert "https://www.wikipedia.org/*" in policy["URLAllowlist"]
     assert "https://*.wikipedia.org/*" in policy["URLAllowlist"]
+    assert "media.example.org" in policy["URLAllowlist"]
+    assert "https://*.media.example.org/*" in policy["URLAllowlist"]
     assert ".youtube-nocookie.com" in policy["URLAllowlist"]
     assert ".googlevideo.com" in policy["URLAllowlist"]
     assert "apis.google.com" in policy["URLAllowlist"]

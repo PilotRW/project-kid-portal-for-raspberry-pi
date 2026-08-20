@@ -53,6 +53,11 @@ def merge_allowed_sites(default_config: dict, target_config: dict) -> None:
     target_config["allowed_sites"] = target_sites
 
 
+def merge_web_allowlist(default_config: dict, target_config: dict) -> None:
+    target_config.setdefault("web_allowlist", [])
+    append_unique(target_config["web_allowlist"], default_config.get("web_allowlist", []))
+
+
 def main() -> int:
     if len(sys.argv) != 3:
         print("Usage: merge_filter_rules.py DEFAULT_CONFIG TARGET_CONFIG", file=sys.stderr)
@@ -63,6 +68,7 @@ def main() -> int:
     target_config = json.loads(target_path.read_text())
 
     merge_allowed_sites(default_config, target_config)
+    merge_web_allowlist(default_config, target_config)
 
     defaults = default_config.get("filtering", {})
     target = target_config.setdefault("filtering", {})

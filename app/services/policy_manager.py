@@ -53,6 +53,8 @@ class PolicyManager:
         allowlist = [*LOCAL_KIOSK_ALLOWLIST]
         for site in self.config.allowed_sites:
             allowlist.extend(self._domain_patterns(site.domain))
+        for domain in self.config.web_allowlist:
+            allowlist.extend(self._domain_patterns(domain))
         allowlist.extend(YOUTUBE_ALLOWLIST)
 
         return {

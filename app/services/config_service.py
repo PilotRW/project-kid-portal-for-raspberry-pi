@@ -59,6 +59,7 @@ class DisplayConfig(BaseModel):
 
 class PortalConfig(BaseModel):
     allowed_sites: list[SiteConfig]
+    web_allowlist: list[str] = Field(default_factory=list)
     youtube: YouTubeConfig = Field(default_factory=YouTubeConfig)
     filtering: FilteringConfig = Field(default_factory=FilteringConfig)
     parent: ParentConfig

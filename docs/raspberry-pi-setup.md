@@ -6,11 +6,19 @@ Before this step, prepare the microSD card and first boot:
 
 [Підготовка microSD](./sd-card-prep.md)
 
+For repeatable installs, prefer the automated bootstrap:
+
+```bash
+./deploy/bootstrap-pi.sh 192.168.0.142 pi
+```
+
+See [Deploy Automation](./deploy-automation.md).
+
 ## 1. Install OS Packages
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv python3-pip chromium-browser xserver-xorg xinit openbox unclutter keyd rsync network-manager
+sudo apt install -y python3-venv python3-pip chromium-browser xserver-xorg xinit openbox unclutter keyd rsync network-manager fail2ban ufw
 ```
 
 ## 2. Install Application
@@ -86,9 +94,15 @@ sudo chmod 440 /etc/sudoers.d/kid-portal-youtube-key
 sudo mkdir -p /etc/X11/xorg.conf.d
 sudo cp deploy/xorg/99-kid-portal.conf /etc/X11/xorg.conf.d/99-kid-portal.conf
 sudo systemctl daemon-reload
-sudo systemctl enable kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-x.service kid-portal-kiosk.service
+sudo cp deploy/security/fail2ban-sshd.local /etc/fail2ban/jail.d/kid-portal-sshd.local
+sudo mkdir -p /etc/ssh/sshd_config.d
+sudo cp deploy/security/sshd-hardening.conf /etc/ssh/sshd_config.d/99-kid-portal-hardening.conf
+sudo sshd -t
+sudo systemctl enable fail2ban keyd ssh kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-x.service kid-portal-kiosk.service
 sudo ufw allow from 192.168.0.0/24 to any port 80 proto tcp
+sudo ufw allow from 192.168.0.0/24 to any port 22 proto tcp
 sudo ufw delete allow from 192.168.0.0/24 to any port 8080 proto tcp
+sudo ufw --force enable
 sudo reboot
 ```
 

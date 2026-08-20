@@ -26,6 +26,15 @@
       "url": "https://on.orf.at/live"
     }
   ],
+  "web_allowlist": [
+    "csoph-api.orf.at",
+    "data-d6e13c60e8.orf.at",
+    "pipe.orf.at",
+    "soph-assets.orf.at",
+    "apasfiis.sf.apa.at",
+    "apasfiisfs.sf.apa.at",
+    "orf-live.ors-shoutcast.at"
+  ],
   "display": {
     "mode": "1080p"
   },
