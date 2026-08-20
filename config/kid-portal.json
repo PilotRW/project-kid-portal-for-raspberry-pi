@@ -183,7 +183,9 @@
       "bendy"
     ],
     "default_decision": "REQUIRE_PARENT_APPROVAL",
-    "max_duration_seconds": 3600
+    "max_duration_seconds": 3600,
+    "short_video_decision": "REQUIRE_PARENT_APPROVAL",
+    "short_video_max_seconds": 60
   },
   "limits": {
     "daily_minutes": 180

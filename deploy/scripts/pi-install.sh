@@ -77,18 +77,26 @@ else
   chmod 664 "$CONFIG_DIR/config.json"
 fi
 
-touch "$CONFIG_DIR/search-history.json" "$CONFIG_DIR/youtube-search-cache.json" "$CONFIG_DIR/usage.json"
-chown "$PI_USER:$PI_USER" "$CONFIG_DIR/search-history.json" "$CONFIG_DIR/youtube-search-cache.json" "$CONFIG_DIR/usage.json"
-chmod 600 "$CONFIG_DIR/youtube-search-cache.json" "$CONFIG_DIR/usage.json"
+touch "$CONFIG_DIR/search-history.json" "$CONFIG_DIR/youtube-search-cache.json" "$CONFIG_DIR/youtube-approval-log.json" "$CONFIG_DIR/filter-insights.json" "$CONFIG_DIR/usage.json"
+chown "$PI_USER:$PI_USER" "$CONFIG_DIR/search-history.json" "$CONFIG_DIR/youtube-search-cache.json" "$CONFIG_DIR/youtube-approval-log.json" "$CONFIG_DIR/filter-insights.json" "$CONFIG_DIR/usage.json"
+chmod 600 "$CONFIG_DIR/youtube-search-cache.json" "$CONFIG_DIR/youtube-approval-log.json" "$CONFIG_DIR/filter-insights.json" "$CONFIG_DIR/usage.json"
 
 if [[ ! -f "$CONFIG_DIR/youtube.env" ]]; then
   cat > "$CONFIG_DIR/youtube.env" <<EOF
 YOUTUBE_API_KEY_FILE=$CONFIG_DIR/youtube-api-key.txt
 KID_PORTAL_SEARCH_HISTORY=$CONFIG_DIR/search-history.json
 KID_PORTAL_YOUTUBE_SEARCH_CACHE=$CONFIG_DIR/youtube-search-cache.json
+KID_PORTAL_YOUTUBE_APPROVAL_LOG=$CONFIG_DIR/youtube-approval-log.json
+KID_PORTAL_FILTER_INSIGHTS=$CONFIG_DIR/filter-insights.json
 KID_PORTAL_USAGE=$CONFIG_DIR/usage.json
 EOF
   chmod 600 "$CONFIG_DIR/youtube.env"
+fi
+if ! grep -q '^KID_PORTAL_YOUTUBE_APPROVAL_LOG=' "$CONFIG_DIR/youtube.env"; then
+  printf '\nKID_PORTAL_YOUTUBE_APPROVAL_LOG=%s/youtube-approval-log.json\n' "$CONFIG_DIR" >> "$CONFIG_DIR/youtube.env"
+fi
+if ! grep -q '^KID_PORTAL_FILTER_INSIGHTS=' "$CONFIG_DIR/youtube.env"; then
+  printf '\nKID_PORTAL_FILTER_INSIGHTS=%s/filter-insights.json\n' "$CONFIG_DIR" >> "$CONFIG_DIR/youtube.env"
 fi
 
 if [[ ! -f "$CONFIG_DIR/youtube-api-key.txt" ]]; then

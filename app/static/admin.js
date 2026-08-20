@@ -69,6 +69,8 @@ function renderState(data) {
   renderStorage(data.storage);
   renderMonitoring(data.monitoring);
   renderHistory(data.history);
+  renderApprovalLog(data.approvals || []);
+  renderFilterInsights(data.filter_insights || {});
   renderSettings();
   renderSites();
   renderConfigList("allowed_keywords", "#allowed-keywords");
@@ -200,6 +202,8 @@ function renderSettings() {
   document.querySelector("#daily-minutes").value = adminState.config.limits.daily_minutes;
   document.querySelector("#unrestricted-minutes-input").value = adminState.config.parent.default_unrestricted_minutes;
   document.querySelector("#max-duration-seconds").value = adminState.config.filtering.max_duration_seconds || "";
+  document.querySelector("#short-video-max-seconds").value = adminState.config.filtering.short_video_max_seconds || "";
+  document.querySelector("#short-video-decision").value = adminState.config.filtering.short_video_decision || "REQUIRE_PARENT_APPROVAL";
   document.querySelector("#youtube-max-results").value = adminState.config.youtube.max_results;
   document.querySelector("#youtube-safe-search").value = adminState.config.youtube.safe_search;
   document.querySelector("#youtube-region-code").value = adminState.config.youtube.region_code;
@@ -221,6 +225,50 @@ function renderHistory(items) {
     card.innerHTML = `
       <strong>${escapeHtml(item.query)}</strong>
       <span>${escapeHtml(item.mode)} - ${item.result_count} results</span>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function renderApprovalLog(items) {
+  const list = document.querySelector("#approval-log-list");
+  list.innerHTML = "";
+  if (!items.length) {
+    list.innerHTML = '<p class="empty">No approved videos yet.</p>';
+    return;
+  }
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "history-card";
+    const reasons = item.reasons?.length ? item.reasons.join(", ") : "no filter reasons";
+    card.innerHTML = `
+      <strong>${escapeHtml(item.title || item.video_id)}</strong>
+      <span>${escapeHtml(item.channel_title || item.channel_id || "unknown channel")} - ${escapeHtml(item.decision)} - ${escapeHtml(reasons)}</span>
+      <span>${escapeHtml(formatDateTime(item.approved_at))}</span>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function renderFilterInsights(insights) {
+  renderInsightList("#filter-gap-list", insights.gaps || [], "No default-allow gaps yet.");
+  renderInsightList("#filter-approval-insight-list", insights.approvals || [], "No repeated approval requests yet.");
+}
+
+function renderInsightList(selector, items, emptyText) {
+  const list = document.querySelector(selector);
+  list.innerHTML = "";
+  if (!items.length) {
+    list.innerHTML = `<p class="empty">${escapeHtml(emptyText)}</p>`;
+    return;
+  }
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "history-card";
+    card.innerHTML = `
+      <strong>${escapeHtml(item.title)}</strong>
+      <span>${escapeHtml(item.channel || "unknown channel")} - ${escapeHtml(item.count)} hits</span>
+      <span>${escapeHtml(formatDateTime(item.last_seen))}</span>
     `;
     list.appendChild(card);
   });
@@ -290,12 +338,21 @@ function syncSettings() {
   adminState.config.limits.daily_minutes = clampInteger("#daily-minutes", 1, 1440, 90);
   adminState.config.parent.default_unrestricted_minutes = clampInteger("#unrestricted-minutes-input", 1, 240, 30);
   adminState.config.filtering.max_duration_seconds = clampInteger("#max-duration-seconds", 1, 86400, 3600);
+  adminState.config.filtering.short_video_max_seconds = clampInteger("#short-video-max-seconds", 1, 600, 60);
+  adminState.config.filtering.short_video_decision = document.querySelector("#short-video-decision").value;
   adminState.config.youtube.max_results = clampInteger("#youtube-max-results", 1, 25, 20);
   adminState.config.youtube.safe_search = document.querySelector("#youtube-safe-search").value;
   adminState.config.youtube.region_code = document.querySelector("#youtube-region-code").value.trim().toUpperCase() || "US";
   adminState.config.filtering.default_decision = document.querySelector("#default-decision").value;
   if (!adminState.config.display) adminState.config.display = {};
   adminState.config.display.mode = document.querySelector("#display-mode").value;
+}
+
+function formatDateTime(value) {
+  if (!value) return "unknown time";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
 }
 
 function formatBytes(bytes) {

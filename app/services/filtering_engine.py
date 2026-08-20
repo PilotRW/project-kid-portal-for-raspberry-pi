@@ -72,6 +72,11 @@ class FilteringEngine:
             reasons.append(f"blocked category: {category}")
             return EvaluatedVideo(video=video, decision=Decision.BLOCK, reasons=reasons)
 
+        if video.duration_seconds is not None and self.config.short_video_max_seconds:
+            if video.duration_seconds < self.config.short_video_max_seconds:
+                reasons.append(f"short video under {self.config.short_video_max_seconds} seconds")
+                return EvaluatedVideo(video=video, decision=Decision(self.config.short_video_decision), reasons=reasons)
+
         approval_hits = self._keyword_hits(text, self.config.approval_keywords)
         if approval_hits:
             reasons.extend(f"approval keyword: {hit}" for hit in approval_hits)

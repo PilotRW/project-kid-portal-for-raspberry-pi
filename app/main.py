@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from app.services.config_service import ConfigService, PortalConfig
 from app.services.display_manager import DisplayManager, DisplayStatus
+from app.services.filter_insights import FilterInsightsService
 from app.services.filtering_engine import Decision, EvaluatedVideo, FilteringEngine, VideoCandidate
 from app.services.network_info import NetworkInfoService
 from app.services.policy_manager import PolicyManager
@@ -23,6 +24,7 @@ from app.services.search_history import SearchHistoryService
 from app.services.usage_tracker import UsageTrackerService
 from app.services.wifi_manager import WifiConnectResult, WifiManager, WifiNetwork, WifiStatus
 from app.services.youtube_api import YouTubeApiError, YouTubeApiService
+from app.services.youtube_approval_log import YouTubeApprovalLogService
 from app.services.youtube_key_manager import YouTubeKeyManager, YouTubeKeyUpdateResult
 from app.services.youtube_search_cache import YouTubeSearchCacheService
 
@@ -33,6 +35,8 @@ config_service = ConfigService()
 youtube_service = YouTubeApiService()
 search_history_service = SearchHistoryService()
 youtube_search_cache_service = YouTubeSearchCacheService()
+youtube_approval_log_service = YouTubeApprovalLogService()
+filter_insights_service = FilterInsightsService()
 network_info_service = NetworkInfoService()
 usage_tracker_service = UsageTrackerService()
 wifi_manager = WifiManager()
@@ -448,8 +452,12 @@ async def search_youtube(q: str = Query(min_length=1, max_length=120)) -> dict[s
             raise HTTPException(status_code=503, detail=error.detail) from error
         if mode == "live":
             youtube_search_cache_service.set(q, config.youtube.max_results, config.youtube.safe_search, raw_results)
-    evaluated = [filtering.evaluate_video(item).model_dump() for item in raw_results]
-    search_history_service.add(q, result_count=len(evaluated), mode=mode)
+    evaluated_models = [filtering.evaluate_video(item) for item in raw_results]
+    for item in evaluated_models:
+        if item.decision == Decision.ALLOW and item.reasons == ["default decision: allow"]:
+            filter_insights_service.record_gap(item.video.channel_title, item.video.title)
+    evaluated = [item.model_dump() for item in evaluated_models]
+    search_history_service.add(q, result_count=len(evaluated_models), mode=mode)
     return {
         "query": q,
         "mode": mode,
@@ -502,6 +510,8 @@ async def unlock_youtube_approval(request: ViewPinRequest) -> dict[str, str]:
     if evaluated.decision == Decision.BLOCK:
         raise HTTPException(status_code=403, detail="Video is blocked by Kid Portal filters")
     approve_youtube_video(request.video_id)
+    youtube_approval_log_service.add(evaluated)
+    filter_insights_service.record_approval(evaluated.video.channel_title, evaluated.video.title)
     return {"status": "unlocked", "watch_url": f"/youtube/watch/{request.video_id}"}
 
 
@@ -550,6 +560,11 @@ async def read_admin_state(request: ParentPinRequest, http_request: Request) -> 
         "youtube": youtube_service.status(),
         "usage": usage_tracker_service.status(config.limits.daily_minutes).model_dump(mode="json"),
         "history": [entry.model_dump(mode="json") for entry in search_history_service.list_entries()],
+        "approvals": [entry.model_dump(mode="json") for entry in youtube_approval_log_service.list_entries()],
+        "filter_insights": {
+            "gaps": [entry.model_dump(mode="json") for entry in filter_insights_service.top("gap")],
+            "approvals": [entry.model_dump(mode="json") for entry in filter_insights_service.top("approval")],
+        },
     }
 
 

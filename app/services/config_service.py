@@ -32,6 +32,8 @@ class FilteringConfig(BaseModel):
     blocked_categories: list[str] = Field(default_factory=list)
     default_decision: Decision = "REQUIRE_PARENT_APPROVAL"
     max_duration_seconds: int | None = Field(default=3600, ge=1)
+    short_video_max_seconds: int | None = Field(default=60, ge=1)
+    short_video_decision: Decision = "REQUIRE_PARENT_APPROVAL"
 
 
 class ParentConfig(BaseModel):

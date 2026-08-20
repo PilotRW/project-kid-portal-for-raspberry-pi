@@ -22,6 +22,32 @@ class FakeYouTubeLookup:
         return self.candidates.get(video_id)
 
 
+class FakeApprovalLog:
+    def __init__(self):
+        self.entries = []
+
+    def add(self, evaluated):
+        self.entries.append(evaluated)
+
+    def list_entries(self):
+        return self.entries
+
+
+class FakeFilterInsights:
+    def __init__(self):
+        self.gaps = []
+        self.approvals = []
+
+    def record_gap(self, channel_title, title):
+        self.gaps.append((channel_title, title))
+
+    def record_approval(self, channel_title, title):
+        self.approvals.append((channel_title, title))
+
+    def top(self, kind=None):
+        return []
+
+
 def video_candidate(video_id: str, title: str = "Science lesson for kids") -> VideoCandidate:
     return VideoCandidate(
         video_id=video_id,
@@ -81,6 +107,7 @@ def test_admin_state_accepts_parent_pin_without_exposing_key():
     assert "monitoring" in payload
     assert "youtube" in payload
     assert "history" in payload
+    assert "approvals" in payload
     assert "usage" in payload
     assert "network_access" in payload
     assert "api_key" not in payload["youtube"]
@@ -173,6 +200,10 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "YouTube Search" in response.text
     assert "YouTube API Key" in response.text
     assert "youtube-key-form" in response.text
+    assert "Short video threshold" in response.text
+    assert "Parent Approval Log" in response.text
+    assert "Unmatched" in response.text
+    assert "Default-Allow Gaps" in response.text
     assert "tab-nav" in response.text
     assert "Blocked Categories" in response.text
     assert "Debug Terminal" in response.text
@@ -187,7 +218,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "data-rule-filter=\"blocked_keywords\"" in response.text
     assert "data-rule-count=\"blocked_keywords\"" in response.text
     assert "admin.css?v=20260715-01" in response.text
-    assert "admin.js?v=20260820-03" in response.text
+    assert "admin.js?v=20260820-05" in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):
@@ -403,7 +434,11 @@ def test_wifi_status_uses_pin(monkeypatch):
 
 
 def test_youtube_approval_uses_separate_viewing_pin(monkeypatch):
+    approval_log = FakeApprovalLog()
+    insights = FakeFilterInsights()
     monkeypatch.setattr(main_module, "youtube_service", FakeYouTubeLookup({"abc123": video_candidate("abc123")}))
+    monkeypatch.setattr(main_module, "youtube_approval_log_service", approval_log)
+    monkeypatch.setattr(main_module, "filter_insights_service", insights)
     client = TestClient(app)
 
     parent_pin = client.post("/api/youtube/approval/unlock", json={"pin": "1234", "video_id": "abc123"})
@@ -412,6 +447,8 @@ def test_youtube_approval_uses_separate_viewing_pin(monkeypatch):
     assert parent_pin.status_code == 403
     assert view_pin.status_code == 200
     assert view_pin.json()["watch_url"] == "/youtube/watch/abc123"
+    assert [entry.video.video_id for entry in approval_log.entries] == ["abc123"]
+    assert insights.approvals == [("Safe Learning", "Science lesson for kids")]
 
 
 def test_admin_history_clear_requires_valid_pin():
@@ -471,6 +508,8 @@ def test_watch_page_blocks_filtered_video(monkeypatch):
 
 
 def test_watch_page_requires_parent_approval_for_default_decision(monkeypatch):
+    approval_log = FakeApprovalLog()
+    insights = FakeFilterInsights()
     monkeypatch.setattr(
         main_module,
         "youtube_service",
@@ -488,6 +527,8 @@ def test_watch_page_requires_parent_approval_for_default_decision(monkeypatch):
             }
         ),
     )
+    monkeypatch.setattr(main_module, "youtube_approval_log_service", approval_log)
+    monkeypatch.setattr(main_module, "filter_insights_service", insights)
     client = TestClient(app)
 
     direct = client.get("/youtube/watch/unknown-123")

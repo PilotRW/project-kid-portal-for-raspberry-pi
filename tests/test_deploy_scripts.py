@@ -19,3 +19,17 @@ def test_network_access_uses_deployed_lan_cidr_file():
     assert 'printf "%s\\n" "$LAN_CIDR" > "$CONFIG_DIR/lan-cidr"' in installer
     assert 'LAN_CIDR_FILE="/etc/kid-portal/lan-cidr"' in script
     assert 'LAN_CIDR="$(head -n 1 "$LAN_CIDR_FILE")"' in script
+
+
+def test_youtube_approval_log_is_deployed():
+    installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+
+    assert "youtube-approval-log.json" in installer
+    assert "KID_PORTAL_YOUTUBE_APPROVAL_LOG" in installer
+
+
+def test_filter_insights_is_deployed():
+    installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+
+    assert "filter-insights.json" in installer
+    assert "KID_PORTAL_FILTER_INSIGHTS" in installer

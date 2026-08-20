@@ -43,6 +43,7 @@
           <button type="button" class="tab-button" data-tab-target="network">Network</button>
           <button type="button" class="tab-button" data-tab-target="playback">Playback</button>
           <button type="button" class="tab-button" data-tab-target="youtube">YouTube</button>
+          <button type="button" class="tab-button" data-tab-target="unmatched">Unmatched</button>
           <button type="button" class="tab-button" data-tab-target="websites">Websites</button>
           <button type="button" class="tab-button" data-tab-target="debug">Debug</button>
         </nav>
@@ -151,6 +152,18 @@
                 Max video duration, seconds
                 <input id="max-duration-seconds" type="number" min="1" max="86400" />
               </label>
+              <label>
+                Short video threshold, seconds
+                <input id="short-video-max-seconds" type="number" min="1" max="600" />
+              </label>
+              <label>
+                Short videos
+                <select id="short-video-decision">
+                  <option value="REQUIRE_PARENT_APPROVAL">require parent approval</option>
+                  <option value="BLOCK">block</option>
+                  <option value="ALLOW">allow</option>
+                </select>
+              </label>
             </div>
           </section>
         </section>
@@ -212,6 +225,13 @@
               <button id="clear-history" type="button" class="secondary">Clear</button>
             </div>
             <div id="history-list" class="history-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <h2>Parent Approval Log</h2>
+            </div>
+            <div id="approval-log-list" class="history-list"></div>
           </section>
 
           <section class="rules-grid">
@@ -295,6 +315,24 @@
           </section>
         </section>
 
+        <section class="tab-panel" data-tab-panel="unmatched" hidden>
+          <section class="panel">
+            <div class="section-heading">
+              <h2>Default-Allow Gaps</h2>
+            </div>
+            <p class="empty">Videos that matched no channel, keyword, category, or duration rule and were allowed only by default.</p>
+            <div id="filter-gap-list" class="history-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <h2>Repeated Parent Approvals</h2>
+            </div>
+            <p class="empty">Videos repeatedly requested through the viewing PIN.</p>
+            <div id="filter-approval-insight-list" class="history-list"></div>
+          </section>
+        </section>
+
         <section class="tab-panel" data-tab-panel="websites" hidden>
           <section class="panel">
             <div class="section-heading">
@@ -339,6 +377,6 @@
         </section>
       </section>
     </main>
-    <script src="/static/admin.js?v=20260820-03"></script>
+    <script src="/static/admin.js?v=20260820-05"></script>
   </body>
 </html>
