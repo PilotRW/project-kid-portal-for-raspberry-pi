@@ -110,6 +110,22 @@
         <section class="tab-panel" data-tab-panel="playback" hidden>
           <section class="panel">
             <div class="section-heading">
+              <h2>Display</h2>
+              <button id="apply-display-mode" type="button" class="secondary">Apply Now</button>
+            </div>
+            <div class="settings-grid">
+              <label>
+                HDMI mode
+                <select id="display-mode">
+                  <option value="1080p">1080p - larger UI</option>
+                  <option value="4k">4K - sharper video</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
               <h2>Viewing PIN</h2>
             </div>
             <div class="pin-settings">
@@ -140,6 +156,24 @@
         </section>
 
         <section class="tab-panel" data-tab-panel="youtube" hidden>
+          <section class="panel">
+            <div class="section-heading">
+              <h2>YouTube API Key</h2>
+              <button id="clear-youtube-key" type="button" class="secondary">Clear Key</button>
+            </div>
+            <div class="api-key-panel">
+              <article class="stat-card">
+                <span>Current status</span>
+                <strong id="youtube-key-status">unknown</strong>
+                <small id="youtube-key-source">No source</small>
+              </article>
+              <form id="youtube-key-form" class="inline-form">
+                <input id="youtube-api-key" type="password" autocomplete="off" placeholder="Paste new YouTube Data API key" />
+                <button type="submit">Save Key</button>
+              </form>
+            </div>
+          </section>
+
           <section class="panel">
             <div class="section-heading">
               <h2>YouTube Search</h2>
@@ -295,6 +329,6 @@
         </section>
       </section>
     </main>
-    <script src="/static/admin.js?v=20260715-01"></script>
+    <script src="/static/admin.js?v=20260820-02"></script>
   </body>
 </html>

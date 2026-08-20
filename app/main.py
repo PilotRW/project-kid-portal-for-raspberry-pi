@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.services.config_service import ConfigService, PortalConfig
+from app.services.display_manager import DisplayManager, DisplayStatus
 from app.services.filtering_engine import FilteringEngine
 from app.services.network_info import NetworkInfoService
 from app.services.policy_manager import PolicyManager
@@ -19,6 +20,7 @@ from app.services.search_history import SearchHistoryService
 from app.services.usage_tracker import UsageTrackerService
 from app.services.wifi_manager import WifiConnectResult, WifiManager, WifiNetwork, WifiStatus
 from app.services.youtube_api import YouTubeApiError, YouTubeApiService
+from app.services.youtube_key_manager import YouTubeKeyManager, YouTubeKeyUpdateResult
 from app.services.youtube_search_cache import YouTubeSearchCacheService
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -31,6 +33,8 @@ youtube_search_cache_service = YouTubeSearchCacheService()
 network_info_service = NetworkInfoService()
 usage_tracker_service = UsageTrackerService()
 wifi_manager = WifiManager()
+display_manager = DisplayManager()
+youtube_key_manager = YouTubeKeyManager()
 THUMBNAIL_HOSTS = {"i.ytimg.com", "s.ytimg.com"}
 NETWORK_ACCESS_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_REQUEST", "/run/kid-portal/network-access.request"))
 NETWORK_ACCESS_STATE_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_STATE", "/run/kid-portal/network-access.state"))
@@ -109,6 +113,14 @@ class NetworkAccessUpdate(ParentPinRequest):
     enabled: bool
 
 
+class DisplayModeUpdate(ParentPinRequest):
+    mode: str
+
+
+class YouTubeKeyUpdate(ParentPinRequest):
+    api_key: str
+
+
 class WifiConnectRequest(ParentPinRequest):
     ssid: str
     password: str | None = None
@@ -119,8 +131,10 @@ ADMIN_SURFACE_ALLOWED_PATHS = {
     "/admin",
     "/api/admin/state",
     "/api/admin/youtube/history/clear",
+    "/api/parent/youtube/key",
     "/api/parent/config",
     "/api/parent/network-access",
+    "/api/parent/display",
     "/api/parent/storage",
     "/api/parent/monitoring",
     "/api/parent/terminal/start",
@@ -496,6 +510,30 @@ async def clear_admin_youtube_history(request: ParentPinRequest, http_request: R
     return {"status": "cleared"}
 
 
+@app.put("/api/parent/youtube/key")
+async def update_youtube_key(request: YouTubeKeyUpdate, http_request: Request) -> dict[str, object]:
+    verify_parent_pin(request.pin, http_request)
+    try:
+        result = youtube_key_manager.set_key(request.api_key)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    youtube_search_cache_service.clear()
+    return {"key": result.model_dump(mode="json"), "youtube": youtube_service.status()}
+
+
+@app.delete("/api/parent/youtube/key")
+async def clear_youtube_key(request: ParentPinRequest, http_request: Request) -> dict[str, object]:
+    verify_parent_pin(request.pin, http_request)
+    try:
+        result = youtube_key_manager.clear_key()
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    youtube_search_cache_service.clear()
+    return {"key": result.model_dump(mode="json"), "youtube": youtube_service.status()}
+
+
 @app.post("/api/parent/network-access")
 async def update_parent_network_access(request: NetworkAccessUpdate, http_request: Request) -> NetworkAccessState:
     verify_parent_pin(request.pin, http_request)
@@ -503,6 +541,19 @@ async def update_parent_network_access(request: NetworkAccessUpdate, http_reques
         return set_network_access_state(request.enabled)
     except OSError:
         raise HTTPException(status_code=500, detail="Network access update failed") from None
+
+
+@app.post("/api/parent/display")
+async def update_parent_display(request: DisplayModeUpdate, http_request: Request) -> DisplayStatus:
+    config = verify_parent_pin(request.pin, http_request)
+    if request.mode not in {"1080p", "4k"}:
+        raise HTTPException(status_code=400, detail="Unsupported display mode")
+    config.display.mode = request.mode
+    config_service.save(config)
+    try:
+        return display_manager.apply(request.mode)
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 @app.post("/api/parent/storage")

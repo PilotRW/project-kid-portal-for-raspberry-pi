@@ -393,7 +393,13 @@ function renderParentConfig() {
   renderConfigList("allowed_channels", "#allowed-channels");
   renderConfigList("blocked_channels", "#blocked-channels");
   renderConfigList("blocked_categories", "#blocked-categories");
+  renderDisplaySettings();
   refreshFocus();
+}
+
+function renderDisplaySettings() {
+  const displayMode = document.querySelector("#display-mode");
+  if (displayMode) displayMode.value = state.editableConfig.display?.mode || "1080p";
 }
 
 function renderFilterSettings() {
@@ -469,6 +475,28 @@ async function loadParentStorage() {
       <span>Total capacity</span>
     </article>
   `;
+  refreshFocus();
+}
+
+async function applyDisplayMode() {
+  const status = document.querySelector("#display-status");
+  const mode = document.querySelector("#display-mode").value;
+  status.textContent = `Switching display to ${mode}...`;
+  const response = await fetch("/api/parent/display", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin: state.parentPin, mode }),
+  });
+  if (!response.ok) {
+    status.textContent = await responseDetail(response, "Display mode update failed.");
+    return;
+  }
+  const data = await response.json();
+  if (!state.editableConfig.display) state.editableConfig.display = {};
+  state.editableConfig.display.mode = mode;
+  status.textContent = data.current_resolution
+    ? `Display switched to ${data.current_resolution}.`
+    : `Display mode saved: ${data.configured_mode}.`;
   refreshFocus();
 }
 
@@ -940,6 +968,7 @@ document.querySelector("#cancel-view-approval").addEventListener("click", cancel
 document.querySelector("#clear-history").addEventListener("click", clearSearchHistory);
 document.querySelector("#refresh-network").addEventListener("click", loadNetworkInfo);
 document.querySelector("#refresh-storage").addEventListener("click", loadParentStorage);
+document.querySelector("#apply-display-mode").addEventListener("click", applyDisplayMode);
 document.querySelector("#scan-wifi").addEventListener("click", scanParentWifi);
 document.querySelector("#wifi-form").addEventListener("submit", connectParentWifi);
 document.querySelector("#refresh-usage").addEventListener("click", loadParentUsage);

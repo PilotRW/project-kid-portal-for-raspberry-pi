@@ -23,9 +23,9 @@ function escapeHtml(value) {
   }[char]));
 }
 
-async function postJson(url, payload) {
+async function postJson(url, payload, method = "POST") {
   const response = await fetch(url, {
-    method: "POST",
+    method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
@@ -57,6 +57,7 @@ function renderState(data) {
   document.querySelector("#host-name").textContent = data.network.hostname || "Portal";
   document.querySelector("#youtube-mode").textContent = data.youtube.mode || "unknown";
   document.querySelector("#youtube-source").textContent = data.youtube.configured ? "API key configured" : "Demo mode";
+  renderYouTubeKeyStatus(data.youtube);
   document.querySelector("#daily-limit").textContent = data.config.limits.daily_minutes;
   document.querySelector("#unrestricted-minutes").textContent = data.config.parent.default_unrestricted_minutes;
   const usedMinutes = Math.floor((data.usage?.used_seconds || 0) / 60);
@@ -77,6 +78,14 @@ function renderState(data) {
   renderConfigList("blocked_channels", "#blocked-channels");
   renderConfigList("blocked_categories", "#blocked-categories");
   activateTab(adminState.activeTab);
+}
+
+function renderYouTubeKeyStatus(youtube) {
+  const status = document.querySelector("#youtube-key-status");
+  const source = document.querySelector("#youtube-key-source");
+  if (!status || !source) return;
+  status.textContent = youtube.configured ? "configured" : "not configured";
+  source.textContent = youtube.configured ? youtube.source : "Demo mode";
 }
 
 function activateTab(tabName) {
@@ -195,6 +204,7 @@ function renderSettings() {
   document.querySelector("#youtube-safe-search").value = adminState.config.youtube.safe_search;
   document.querySelector("#youtube-region-code").value = adminState.config.youtube.region_code;
   document.querySelector("#default-decision").value = adminState.config.filtering.default_decision || "REQUIRE_PARENT_APPROVAL";
+  document.querySelector("#display-mode").value = adminState.config.display?.mode || "1080p";
   document.querySelector("#view-pin").value = "";
 }
 
@@ -284,6 +294,8 @@ function syncSettings() {
   adminState.config.youtube.safe_search = document.querySelector("#youtube-safe-search").value;
   adminState.config.youtube.region_code = document.querySelector("#youtube-region-code").value.trim().toUpperCase() || "US";
   adminState.config.filtering.default_decision = document.querySelector("#default-decision").value;
+  if (!adminState.config.display) adminState.config.display = {};
+  adminState.config.display.mode = document.querySelector("#display-mode").value;
 }
 
 function formatBytes(bytes) {
@@ -338,6 +350,66 @@ async function returnToKiosk() {
   }
 }
 
+async function applyDisplayMode() {
+  const mode = document.querySelector("#display-mode").value;
+  saveStatus.textContent = `Switching display to ${mode}...`;
+  try {
+    const state = await postJson("/api/parent/display", { pin: adminState.pin, mode });
+    if (!adminState.config.display) adminState.config.display = {};
+    adminState.config.display.mode = mode;
+    saveStatus.textContent = state.current_resolution
+      ? `Display switched to ${state.current_resolution}.`
+      : `Display mode saved: ${state.configured_mode}.`;
+  } catch (error) {
+    saveStatus.textContent = error.message || "Display mode update failed.";
+  }
+}
+
+async function saveYouTubeKey(event) {
+  event.preventDefault();
+  const input = document.querySelector("#youtube-api-key");
+  const apiKey = input.value.trim();
+  if (!apiKey) {
+    saveStatus.textContent = "Paste an API key first.";
+    return;
+  }
+  saveStatus.textContent = "Saving YouTube API key...";
+  try {
+    const result = await fetch("/api/parent/youtube/key", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: adminState.pin, api_key: apiKey }),
+    });
+    if (!result.ok) {
+      let detail = "YouTube API key save failed.";
+      try {
+        detail = (await result.json()).detail || detail;
+      } catch (error) {
+        detail = "YouTube API key save failed.";
+      }
+      throw new Error(detail);
+    }
+    const data = await result.json();
+    input.value = "";
+    renderYouTubeKeyStatus(data.youtube);
+    saveStatus.textContent = "YouTube API key saved. Search cache cleared.";
+  } catch (error) {
+    saveStatus.textContent = error.message || "YouTube API key save failed.";
+  }
+}
+
+async function clearYouTubeKey() {
+  saveStatus.textContent = "Clearing YouTube API key...";
+  try {
+    const data = await postJson("/api/parent/youtube/key", { pin: adminState.pin }, "DELETE");
+    renderYouTubeKeyStatus(data.youtube);
+    document.querySelector("#youtube-api-key").value = "";
+    saveStatus.textContent = "YouTube API key cleared. Search cache cleared.";
+  } catch (error) {
+    saveStatus.textContent = error.message || "YouTube API key clear failed.";
+  }
+}
+
 async function updateContentLanAccess(event) {
   const toggle = event.target;
   const enabled = toggle.checked;
@@ -384,6 +456,9 @@ signOutButton.addEventListener("click", lockAdmin);
 document.querySelector("#save-config").addEventListener("click", saveConfig);
 document.querySelector("#exit-to-terminal").addEventListener("click", startTerminalMode);
 document.querySelector("#return-to-kiosk").addEventListener("click", returnToKiosk);
+document.querySelector("#apply-display-mode").addEventListener("click", applyDisplayMode);
+document.querySelector("#youtube-key-form").addEventListener("submit", saveYouTubeKey);
+document.querySelector("#clear-youtube-key").addEventListener("click", clearYouTubeKey);
 document.querySelector("#content-lan-toggle").addEventListener("change", updateContentLanAccess);
 document.querySelector("#clear-history").addEventListener("click", async () => {
   await postJson("/api/admin/youtube/history/clear", { pin: adminState.pin });

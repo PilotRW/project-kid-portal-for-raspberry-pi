@@ -26,6 +26,9 @@
       "url": "https://on.orf.at/live"
     }
   ],
+  "display": {
+    "mode": "1080p"
+  },
   "filtering": {
     "allowed_channels": [
       "Demo Learning Channel"

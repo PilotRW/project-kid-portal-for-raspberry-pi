@@ -53,12 +53,17 @@ class LimitConfig(BaseModel):
     daily_minutes: int = Field(default=90, ge=1, le=1440)
 
 
+class DisplayConfig(BaseModel):
+    mode: Literal["1080p", "4k"] = "1080p"
+
+
 class PortalConfig(BaseModel):
     allowed_sites: list[SiteConfig]
     youtube: YouTubeConfig = Field(default_factory=YouTubeConfig)
     filtering: FilteringConfig = Field(default_factory=FilteringConfig)
     parent: ParentConfig
     limits: LimitConfig = Field(default_factory=LimitConfig)
+    display: DisplayConfig = Field(default_factory=DisplayConfig)
 
 
 class ConfigService:

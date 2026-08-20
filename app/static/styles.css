@@ -507,6 +507,30 @@ input:focus {
   gap: 8px;
 }
 
+.display-mode-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.display-mode-row label {
+  display: grid;
+  gap: 7px;
+  color: #c6d8cf;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.display-mode-row select {
+  min-height: 58px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 18px;
+  background: #f6fbf8;
+  color: #08120f;
+  font-size: 22px;
+}
+
 .wifi-network {
   display: grid;
   grid-template-columns: 1fr auto;

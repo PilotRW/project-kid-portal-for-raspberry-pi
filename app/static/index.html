@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kid Portal</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260820-01">
+    <link rel="stylesheet" href="/static/styles.css?v=20260820-02">
   </head>
   <body>
     <main class="shell">
@@ -79,6 +79,23 @@
               <button id="refresh-storage" type="button">Refresh</button>
             </div>
             <div id="storage-info" class="storage-info"></div>
+          </section>
+
+          <section class="admin-section">
+            <div class="history-header">
+              <h3>Display</h3>
+              <button id="apply-display-mode" type="button">Apply</button>
+            </div>
+            <div class="display-mode-row">
+              <label>
+                HDMI mode
+                <select id="display-mode">
+                  <option value="1080p">1080p - larger UI</option>
+                  <option value="4k">4K - sharper video</option>
+                </select>
+              </label>
+            </div>
+            <p id="display-status" class="history-empty"></p>
           </section>
 
           <section class="admin-section">
@@ -239,6 +256,6 @@
       <div class="keyboard-preview" id="keyboard-preview"></div>
       <div id="keyboard-keys" class="keyboard-keys"></div>
     </section>
-    <script src="/static/app.js?v=20260820-01"></script>
+    <script src="/static/app.js?v=20260820-02"></script>
   </body>
 </html>

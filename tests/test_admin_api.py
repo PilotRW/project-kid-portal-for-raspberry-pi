@@ -2,8 +2,10 @@ from fastapi.testclient import TestClient
 
 import app.main as main_module
 from app.main import app
+from app.services.display_manager import DisplayStatus
 from app.services.usage_tracker import UsageTrackerService
 from app.services.wifi_manager import WifiConnectResult, WifiNetwork, WifiStatus
+from app.services.youtube_key_manager import YouTubeKeyUpdateResult
 
 
 def setup_function():
@@ -114,6 +116,8 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert "view-pin" in response.text
     assert "wifi-form" in response.text
     assert "scan-wifi" in response.text
+    assert "display-mode" in response.text
+    assert "apply-display-mode" in response.text
 
 
 def test_remote_admin_includes_viewing_pin_control():
@@ -126,9 +130,13 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "view-pin" in response.text
     assert "Time Limits" in response.text
     assert "YouTube Search" in response.text
+    assert "YouTube API Key" in response.text
+    assert "youtube-key-form" in response.text
     assert "tab-nav" in response.text
     assert "Blocked Categories" in response.text
     assert "Debug Terminal" in response.text
+    assert "Display" in response.text
+    assert "display-mode" in response.text
     assert "Sign out" in response.text
     assert "lock-admin" not in response.text
     assert "content-lan-toggle" in response.text
@@ -136,7 +144,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "data-rule-filter=\"blocked_keywords\"" in response.text
     assert "data-rule-count=\"blocked_keywords\"" in response.text
     assert "admin.css?v=20260715-01" in response.text
-    assert "admin.js?v=20260715-01" in response.text
+    assert "admin.js?v=20260820-02" in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):
@@ -165,6 +173,120 @@ def test_network_access_update_requires_valid_pin():
     response = client.post("/api/parent/network-access", json={"pin": "0000", "enabled": True})
 
     assert response.status_code == 403
+
+
+def test_display_update_requires_valid_pin():
+    client = TestClient(app)
+
+    response = client.post("/api/parent/display", json={"pin": "0000", "mode": "4k"})
+
+    assert response.status_code == 403
+
+
+def test_display_update_saves_and_applies(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.json"
+    config_path.write_text(main_module.config_service.load().model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr(main_module.config_service, "config_path", config_path)
+
+    class FakeDisplayManager:
+        def apply(self, mode):
+            assert mode == "4k"
+            return DisplayStatus(configured_mode=mode, current_resolution="3840x2160")
+
+    monkeypatch.setattr(main_module, "display_manager", FakeDisplayManager())
+    client = TestClient(app)
+
+    response = client.post("/api/parent/display", json={"pin": "1234", "mode": "4k"})
+
+    assert response.status_code == 200
+    assert response.json()["current_resolution"] == "3840x2160"
+    assert main_module.config_service.load().display.mode == "4k"
+
+
+def test_display_update_rejects_unknown_mode():
+    client = TestClient(app)
+
+    response = client.post("/api/parent/display", json={"pin": "1234", "mode": "720p"})
+
+    assert response.status_code == 400
+
+
+def test_youtube_key_update_requires_valid_pin():
+    client = TestClient(app)
+
+    response = client.put("/api/parent/youtube/key", json={"pin": "0000", "api_key": "A" * 30})
+
+    assert response.status_code == 403
+
+
+def test_youtube_key_update_saves_without_exposing_key(monkeypatch):
+    class FakeYouTubeKeyManager:
+        def set_key(self, api_key):
+            assert api_key == "A" * 30
+            return YouTubeKeyUpdateResult(status="saved")
+
+    class FakeYouTubeService:
+        def status(self):
+            return {"configured": True, "mode": "live", "source": "/etc/kid-portal/youtube-api-key.txt"}
+
+    class FakeSearchCache:
+        def __init__(self):
+            self.cleared = False
+
+        def clear(self):
+            self.cleared = True
+
+    cache = FakeSearchCache()
+    monkeypatch.setattr(main_module, "youtube_key_manager", FakeYouTubeKeyManager())
+    monkeypatch.setattr(main_module, "youtube_service", FakeYouTubeService())
+    monkeypatch.setattr(main_module, "youtube_search_cache_service", cache)
+    client = TestClient(app)
+
+    response = client.put("/api/parent/youtube/key", json={"pin": "1234", "api_key": "A" * 30})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["youtube"]["configured"] is True
+    assert "api_key" not in payload
+    assert "A" * 30 not in response.text
+    assert cache.cleared is True
+
+
+def test_youtube_key_update_rejects_short_key():
+    client = TestClient(app)
+
+    response = client.put("/api/parent/youtube/key", json={"pin": "1234", "api_key": "short"})
+
+    assert response.status_code == 400
+
+
+def test_youtube_key_clear_uses_pin(monkeypatch):
+    class FakeYouTubeKeyManager:
+        def clear_key(self):
+            return YouTubeKeyUpdateResult(status="cleared")
+
+    class FakeYouTubeService:
+        def status(self):
+            return {"configured": False, "mode": "demo", "source": "none"}
+
+    class FakeSearchCache:
+        def __init__(self):
+            self.cleared = False
+
+        def clear(self):
+            self.cleared = True
+
+    cache = FakeSearchCache()
+    monkeypatch.setattr(main_module, "youtube_key_manager", FakeYouTubeKeyManager())
+    monkeypatch.setattr(main_module, "youtube_service", FakeYouTubeService())
+    monkeypatch.setattr(main_module, "youtube_search_cache_service", cache)
+    client = TestClient(app)
+
+    response = client.request("DELETE", "/api/parent/youtube/key", json={"pin": "1234"})
+
+    assert response.status_code == 200
+    assert response.json()["youtube"]["mode"] == "demo"
+    assert cache.cleared is True
 
 
 def test_wifi_controls_require_valid_pin():

@@ -72,11 +72,17 @@ sudo cp deploy/tmpfiles/kid-portal.conf /etc/tmpfiles.d/kid-portal.conf
 sudo systemd-tmpfiles --create /etc/tmpfiles.d/kid-portal.conf
 sudo cp deploy/scripts/kid-portal-network-access.sh /usr/local/sbin/kid-portal-network-access
 sudo chmod 755 /usr/local/sbin/kid-portal-network-access
+sudo cp deploy/scripts/kid-portal-display-mode.sh /usr/local/sbin/kid-portal-display-mode
+sudo chmod 755 /usr/local/sbin/kid-portal-display-mode
 sudo cp deploy/scripts/kid-portal-wifi.sh /usr/local/sbin/kid-portal-wifi
 sudo chmod 755 /usr/local/sbin/kid-portal-wifi
+sudo cp deploy/scripts/kid-portal-youtube-key.sh /usr/local/sbin/kid-portal-youtube-key
+sudo chmod 755 /usr/local/sbin/kid-portal-youtube-key
 sudo mkdir -p /etc/sudoers.d
 sudo cp deploy/sudoers/kid-portal-wifi /etc/sudoers.d/kid-portal-wifi
+sudo cp deploy/sudoers/kid-portal-youtube-key /etc/sudoers.d/kid-portal-youtube-key
 sudo chmod 440 /etc/sudoers.d/kid-portal-wifi
+sudo chmod 440 /etc/sudoers.d/kid-portal-youtube-key
 sudo mkdir -p /etc/X11/xorg.conf.d
 sudo cp deploy/xorg/99-kid-portal.conf /etc/X11/xorg.conf.d/99-kid-portal.conf
 sudo systemctl daemon-reload
