@@ -118,6 +118,8 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert "scan-wifi" in response.text
     assert "display-mode" in response.text
     assert "apply-display-mode" in response.text
+    assert 'id="keyboard"' in response.text
+    assert "app.js?v=20260820-04" in response.text
 
 
 def test_remote_admin_includes_viewing_pin_control():

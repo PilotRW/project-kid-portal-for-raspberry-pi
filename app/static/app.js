@@ -806,7 +806,7 @@ function showKeyboard(input) {
   const alreadyOpenForInput = !keyboard.hidden && state.activeInput === input;
   if (alreadyOpenForInput) return;
   state.activeInput = input;
-  state.keyboardMode = input.dataset.keyboard || "text";
+  state.keyboardMode = keyboardModeForInput(input);
   document.body.classList.add("keyboard-open");
   keyboard.hidden = false;
   renderKeyboard();
@@ -874,7 +874,12 @@ function pressKeyboardKey(key) {
     return;
   }
   if (key === "Enter") {
-    input.form.requestSubmit();
+    if (input.form) {
+      input.form.requestSubmit();
+    } else {
+      hideKeyboard();
+      refreshFocus();
+    }
     return;
   }
   if (key === "Back") {
@@ -888,6 +893,28 @@ function pressKeyboardKey(key) {
   }
   renderKeyboard();
   refreshFocus();
+}
+
+function shouldUseKeyboard(input) {
+  if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)) return false;
+  if (input.disabled || input.readOnly) return false;
+  if (input.dataset.keyboard === "off") return false;
+  if (input instanceof HTMLTextAreaElement) return true;
+  return !["button", "checkbox", "color", "file", "hidden", "image", "radio", "range", "reset", "submit"].includes(input.type);
+}
+
+function keyboardModeForInput(input) {
+  if (input.dataset.keyboard) return input.dataset.keyboard;
+  if (input.inputMode === "numeric" || input.type === "number" || input.type === "tel") return "numeric";
+  return "text";
+}
+
+function bindKeyboardInput(input) {
+  if (!shouldUseKeyboard(input) || input.dataset.keyboardBound === "true") return;
+  input.dataset.keyboardBound = "true";
+  input.addEventListener("focus", () => showKeyboard(input));
+  input.addEventListener("click", () => showKeyboard(input));
+  input.addEventListener("input", renderKeyboard);
 }
 
 document.addEventListener("keydown", (event) => {
@@ -929,7 +956,7 @@ document.addEventListener("keydown", (event) => {
   }
   if (["Enter", " "].includes(event.key)) {
     const target = state.focusables[state.focusedIndex];
-    if (target && target.tagName === "INPUT") {
+    if (target && shouldUseKeyboard(target)) {
       event.preventDefault();
       showKeyboard(target);
     } else if (target) {
@@ -948,10 +975,14 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-document.querySelectorAll("[data-keyboard]").forEach((input) => {
-  input.addEventListener("focus", () => showKeyboard(input));
-  input.addEventListener("click", () => showKeyboard(input));
-  input.addEventListener("input", renderKeyboard);
+document.addEventListener("focusin", (event) => {
+  if (shouldUseKeyboard(event.target)) bindKeyboardInput(event.target);
+});
+document.addEventListener("click", (event) => {
+  if (shouldUseKeyboard(event.target)) bindKeyboardInput(event.target);
+});
+document.querySelectorAll("input, textarea").forEach((input) => {
+  bindKeyboardInput(input);
 });
 document.querySelectorAll("[data-back]").forEach((button) => {
   button.addEventListener("click", () => showView("home"));
