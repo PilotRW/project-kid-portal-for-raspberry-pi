@@ -1,4 +1,7 @@
-from app.services.youtube_api import YouTubeApiService
+import httpx
+import pytest
+
+from app.services.youtube_api import YouTubeApiError, YouTubeApiService
 
 
 def test_candidates_skip_non_embeddable_results():
@@ -38,3 +41,18 @@ def test_candidates_skip_non_embeddable_results():
 
     assert [candidate.video_id for candidate in candidates] == ["allowed"]
     assert candidates[0].thumbnail_url == "https://i.ytimg.com/high.jpg"
+
+
+def test_quota_error_is_redacted_and_actionable():
+    response = httpx.Response(
+        429,
+        request=httpx.Request("GET", "https://www.googleapis.com/youtube/v3/search?key=secret"),
+        json={"error": {"message": "Quota exceeded"}},
+    )
+
+    with pytest.raises(YouTubeApiError) as error:
+        YouTubeApiService._raise_for_api_error(response, "search")
+
+    assert error.value.status_code == 429
+    assert "quota" in error.value.detail.lower()
+    assert "secret" not in error.value.detail

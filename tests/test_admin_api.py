@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 import app.main as main_module
 from app.main import app
 from app.services.usage_tracker import UsageTrackerService
+from app.services.wifi_manager import WifiConnectResult, WifiNetwork, WifiStatus
 
 
 def setup_function():
@@ -111,6 +112,8 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert "refresh-monitoring" in response.text
     assert "view-approval-form" in response.text
     assert "view-pin" in response.text
+    assert "wifi-form" in response.text
+    assert "scan-wifi" in response.text
 
 
 def test_remote_admin_includes_viewing_pin_control():
@@ -162,6 +165,58 @@ def test_network_access_update_requires_valid_pin():
     response = client.post("/api/parent/network-access", json={"pin": "0000", "enabled": True})
 
     assert response.status_code == 403
+
+
+def test_wifi_controls_require_valid_pin():
+    client = TestClient(app)
+
+    response = client.post("/api/parent/wifi/scan", json={"pin": "0000"})
+
+    assert response.status_code == 403
+
+
+def test_wifi_scan_returns_networks(monkeypatch):
+    class FakeWifiManager:
+        def scan(self):
+            return [WifiNetwork(ssid="Home", signal=90, security="WPA2", connected=True)]
+
+    monkeypatch.setattr(main_module, "wifi_manager", FakeWifiManager())
+    client = TestClient(app)
+
+    response = client.post("/api/parent/wifi/scan", json={"pin": "1234"})
+
+    assert response.status_code == 200
+    assert response.json()["networks"][0]["ssid"] == "Home"
+
+
+def test_wifi_connect_uses_pin(monkeypatch):
+    class FakeWifiManager:
+        def connect(self, ssid, password=None):
+            assert ssid == "Home"
+            assert password == "secret"
+            return WifiConnectResult(status="connecting", message="ok")
+
+    monkeypatch.setattr(main_module, "wifi_manager", FakeWifiManager())
+    client = TestClient(app)
+
+    response = client.post("/api/parent/wifi/connect", json={"pin": "1234", "ssid": "Home", "password": "secret"})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "connecting"
+
+
+def test_wifi_status_uses_pin(monkeypatch):
+    class FakeWifiManager:
+        def status(self):
+            return WifiStatus(state="100 (connected)", connection="Home")
+
+    monkeypatch.setattr(main_module, "wifi_manager", FakeWifiManager())
+    client = TestClient(app)
+
+    response = client.post("/api/parent/wifi/status", json={"pin": "1234"})
+
+    assert response.status_code == 200
+    assert response.json()["connection"] == "Home"
 
 
 def test_youtube_approval_uses_separate_viewing_pin():

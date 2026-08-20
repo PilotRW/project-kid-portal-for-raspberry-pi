@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kid Portal</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260713-01">
+    <link rel="stylesheet" href="/static/styles.css?v=20260820-01">
   </head>
   <body>
     <main class="shell">
@@ -79,6 +79,20 @@
               <button id="refresh-storage" type="button">Refresh</button>
             </div>
             <div id="storage-info" class="storage-info"></div>
+          </section>
+
+          <section class="admin-section">
+            <div class="history-header">
+              <h3>Wi-Fi</h3>
+              <button id="scan-wifi" type="button">Scan</button>
+            </div>
+            <div id="wifi-status" class="history-empty"></div>
+            <div id="wifi-list" class="wifi-list"></div>
+            <form id="wifi-form" class="wifi-form">
+              <input id="wifi-ssid" type="text" placeholder="SSID" data-keyboard="text">
+              <input id="wifi-password" type="password" placeholder="Password" data-keyboard="text">
+              <button type="submit">Connect</button>
+            </form>
           </section>
 
           <section class="admin-section">
@@ -225,6 +239,6 @@
       <div class="keyboard-preview" id="keyboard-preview"></div>
       <div id="keyboard-keys" class="keyboard-keys"></div>
     </section>
-    <script src="/static/app.js?v=20260713-01"></script>
+    <script src="/static/app.js?v=20260820-01"></script>
   </body>
 </html>

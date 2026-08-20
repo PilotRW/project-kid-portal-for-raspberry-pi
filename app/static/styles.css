@@ -501,6 +501,58 @@ input:focus {
   gap: 10px;
 }
 
+.wifi-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.wifi-network {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  min-height: 70px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(246, 251, 248, 0.09);
+  color: #f6fbf8;
+  text-align: left;
+}
+
+.wifi-network strong,
+.wifi-network small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wifi-network span {
+  color: #ffd166;
+  font-weight: 900;
+}
+
+.wifi-network small {
+  grid-column: 1 / -1;
+  color: #a8beb4;
+  font-weight: 700;
+}
+
+.wifi-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.wifi-form button {
+  min-width: 120px;
+  border: 0;
+  border-radius: 6px;
+  background: #9ddabf;
+  color: #08120f;
+  font-weight: 800;
+}
+
 .network-host {
   color: #a8beb4;
   font-size: 18px;

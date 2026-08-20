@@ -10,7 +10,7 @@ Before this step, prepare the microSD card and first boot:
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv python3-pip chromium-browser xserver-xorg xinit openbox unclutter keyd rsync
+sudo apt install -y python3-venv python3-pip chromium-browser xserver-xorg xinit openbox unclutter keyd rsync network-manager
 ```
 
 ## 2. Install Application
@@ -27,6 +27,9 @@ sudo chown root:pi /etc/kid-portal/config.json
 sudo chmod 664 /etc/kid-portal/config.json
 sudo touch /etc/kid-portal/search-history.json
 sudo chown pi:pi /etc/kid-portal/search-history.json
+sudo touch /etc/kid-portal/youtube-search-cache.json
+sudo chown pi:pi /etc/kid-portal/youtube-search-cache.json
+sudo chmod 600 /etc/kid-portal/youtube-search-cache.json
 ```
 
 Optional YouTube API key:
@@ -36,6 +39,7 @@ sudo install -m 640 -o root -g pi ./config/youtube-api-key.txt /etc/kid-portal/y
 sudo tee /etc/kid-portal/youtube.env >/dev/null <<EOF
 YOUTUBE_API_KEY_FILE=/etc/kid-portal/youtube-api-key.txt
 KID_PORTAL_SEARCH_HISTORY=/etc/kid-portal/search-history.json
+KID_PORTAL_YOUTUBE_SEARCH_CACHE=/etc/kid-portal/youtube-search-cache.json
 EOF
 sudo chmod 600 /etc/kid-portal/youtube.env
 ```
@@ -68,6 +72,11 @@ sudo cp deploy/tmpfiles/kid-portal.conf /etc/tmpfiles.d/kid-portal.conf
 sudo systemd-tmpfiles --create /etc/tmpfiles.d/kid-portal.conf
 sudo cp deploy/scripts/kid-portal-network-access.sh /usr/local/sbin/kid-portal-network-access
 sudo chmod 755 /usr/local/sbin/kid-portal-network-access
+sudo cp deploy/scripts/kid-portal-wifi.sh /usr/local/sbin/kid-portal-wifi
+sudo chmod 755 /usr/local/sbin/kid-portal-wifi
+sudo mkdir -p /etc/sudoers.d
+sudo cp deploy/sudoers/kid-portal-wifi /etc/sudoers.d/kid-portal-wifi
+sudo chmod 440 /etc/sudoers.d/kid-portal-wifi
 sudo mkdir -p /etc/X11/xorg.conf.d
 sudo cp deploy/xorg/99-kid-portal.conf /etc/X11/xorg.conf.d/99-kid-portal.conf
 sudo systemctl daemon-reload

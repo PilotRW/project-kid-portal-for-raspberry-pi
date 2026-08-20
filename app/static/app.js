@@ -68,7 +68,8 @@ function showView(name) {
 }
 
 function openSettings() {
-  window.location.href = "/admin";
+  showView("settings");
+  loadNetworkInfo();
 }
 
 function refreshFocus() {
@@ -162,7 +163,16 @@ async function searchYouTube(event) {
   status.textContent = "Searching...";
   try {
     const response = await fetch(`/api/youtube/search?q=${encodeURIComponent(query)}`);
-    if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+    if (!response.ok) {
+      let detail = `Search failed: ${response.status}`;
+      try {
+        const payload = await response.json();
+        detail = payload.detail || detail;
+      } catch (error) {
+        detail = `Search failed: ${response.status}`;
+      }
+      throw new Error(detail);
+    }
     const data = await response.json();
     loadSearchHistory();
     status.textContent = data.notice || `${data.results.length} filtered results`;
@@ -201,7 +211,7 @@ async function searchYouTube(event) {
       results.appendChild(card);
     });
   } catch (error) {
-    status.textContent = "Search failed. Check YouTube API configuration.";
+    status.textContent = error.message || "Search failed. Check YouTube API configuration.";
   }
   refreshFocus();
 }
@@ -361,6 +371,7 @@ async function unlockSettings(event) {
   document.querySelector("#parent-panel").hidden = false;
   await loadParentConfig();
   await loadParentStorage();
+  await loadParentWifiStatus();
   await loadParentUsage();
   await loadParentMonitoring();
   await loadParentHistorySummary();
@@ -459,6 +470,93 @@ async function loadParentStorage() {
     </article>
   `;
   refreshFocus();
+}
+
+async function loadParentWifiStatus() {
+  const container = document.querySelector("#wifi-status");
+  container.textContent = "Checking Wi-Fi...";
+  const response = await fetch("/api/parent/wifi/status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin: state.parentPin }),
+  });
+  if (!response.ok) {
+    container.textContent = "Wi-Fi status unavailable.";
+    return;
+  }
+  const data = await response.json();
+  container.textContent = data.connection
+    ? `Connected: ${data.connection} (${data.state})`
+    : `Wi-Fi state: ${data.state}`;
+}
+
+async function scanParentWifi() {
+  const status = document.querySelector("#wifi-status");
+  const list = document.querySelector("#wifi-list");
+  status.textContent = "Scanning Wi-Fi...";
+  list.innerHTML = "";
+  const response = await fetch("/api/parent/wifi/scan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin: state.parentPin }),
+  });
+  if (!response.ok) {
+    status.textContent = await responseDetail(response, "Wi-Fi scan failed.");
+    refreshFocus();
+    return;
+  }
+  const data = await response.json();
+  if (!data.networks.length) {
+    status.textContent = "No Wi-Fi networks found.";
+    refreshFocus();
+    return;
+  }
+  status.textContent = `${data.networks.length} Wi-Fi networks found.`;
+  data.networks.forEach((network) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "wifi-network";
+    button.innerHTML = `
+      <strong>${escapeHtml(network.ssid)}</strong>
+      <span>${network.signal}%</span>
+      <small>${escapeHtml(network.connected ? "Connected" : network.security)}</small>
+    `;
+    button.addEventListener("click", () => {
+      document.querySelector("#wifi-ssid").value = network.ssid;
+      document.querySelector("#wifi-password").value = "";
+      status.textContent = `Selected ${network.ssid}.`;
+      refreshFocus();
+    });
+    list.appendChild(button);
+  });
+  refreshFocus();
+}
+
+async function connectParentWifi(event) {
+  event.preventDefault();
+  hideKeyboard();
+  refreshFocus();
+  const status = document.querySelector("#wifi-status");
+  const ssid = document.querySelector("#wifi-ssid").value.trim();
+  const password = document.querySelector("#wifi-password").value;
+  if (!ssid) {
+    status.textContent = "Select or enter SSID.";
+    return;
+  }
+  status.textContent = `Connecting to ${ssid}...`;
+  const response = await fetch("/api/parent/wifi/connect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin: state.parentPin, ssid, password: password || null }),
+  });
+  if (!response.ok) {
+    status.textContent = await responseDetail(response, "Wi-Fi connection failed.");
+    return;
+  }
+  const data = await response.json();
+  status.textContent = data.message || "Wi-Fi connection request sent.";
+  document.querySelector("#wifi-password").value = "";
+  await loadParentWifiStatus();
 }
 
 async function loadParentUsage() {
@@ -656,8 +754,17 @@ async function saveParentConfig() {
   }
 }
 
+async function responseDetail(response, fallback) {
+  try {
+    const payload = await response.json();
+    return payload.detail || fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
 function escapeHtml(value) {
-  return value.replace(/[&<>"']/g, (char) => ({
+  return String(value).replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
@@ -833,6 +940,8 @@ document.querySelector("#cancel-view-approval").addEventListener("click", cancel
 document.querySelector("#clear-history").addEventListener("click", clearSearchHistory);
 document.querySelector("#refresh-network").addEventListener("click", loadNetworkInfo);
 document.querySelector("#refresh-storage").addEventListener("click", loadParentStorage);
+document.querySelector("#scan-wifi").addEventListener("click", scanParentWifi);
+document.querySelector("#wifi-form").addEventListener("submit", connectParentWifi);
 document.querySelector("#refresh-usage").addEventListener("click", loadParentUsage);
 document.querySelector("#refresh-monitoring").addEventListener("click", loadParentMonitoring);
 document.querySelector("#clear-parent-history").addEventListener("click", clearParentHistory);

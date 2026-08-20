@@ -17,7 +17,9 @@ from app.services.network_info import NetworkInfoService
 from app.services.policy_manager import PolicyManager
 from app.services.search_history import SearchHistoryService
 from app.services.usage_tracker import UsageTrackerService
-from app.services.youtube_api import YouTubeApiService
+from app.services.wifi_manager import WifiConnectResult, WifiManager, WifiNetwork, WifiStatus
+from app.services.youtube_api import YouTubeApiError, YouTubeApiService
+from app.services.youtube_search_cache import YouTubeSearchCacheService
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -25,8 +27,10 @@ STATIC_DIR = BASE_DIR / "static"
 config_service = ConfigService()
 youtube_service = YouTubeApiService()
 search_history_service = SearchHistoryService()
+youtube_search_cache_service = YouTubeSearchCacheService()
 network_info_service = NetworkInfoService()
 usage_tracker_service = UsageTrackerService()
+wifi_manager = WifiManager()
 THUMBNAIL_HOSTS = {"i.ytimg.com", "s.ytimg.com"}
 NETWORK_ACCESS_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_REQUEST", "/run/kid-portal/network-access.request"))
 NETWORK_ACCESS_STATE_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_STATE", "/run/kid-portal/network-access.state"))
@@ -103,6 +107,11 @@ class NetworkAccessState(BaseModel):
 
 class NetworkAccessUpdate(ParentPinRequest):
     enabled: bool
+
+
+class WifiConnectRequest(ParentPinRequest):
+    ssid: str
+    password: str | None = None
 
 
 ADMIN_SURFACE_ALLOWED_PATHS = {
@@ -365,16 +374,37 @@ async def read_youtube_status() -> dict[str, str | bool]:
 async def search_youtube(q: str = Query(min_length=1, max_length=120)) -> dict[str, object]:
     config = get_config()
     filtering = FilteringEngine(config.filtering)
-    raw_results = await youtube_service.search(q, limit=config.youtube.max_results, safe_search=config.youtube.safe_search)
-    evaluated = [filtering.evaluate_video(item).model_dump() for item in raw_results]
     mode = youtube_service.status()["mode"]
+    raw_results = youtube_search_cache_service.get(q, config.youtube.max_results, config.youtube.safe_search)
+    if raw_results is not None:
+        mode = "cache"
+    else:
+        try:
+            raw_results = await youtube_service.search(
+                q,
+                limit=config.youtube.max_results,
+                safe_search=config.youtube.safe_search,
+            )
+        except YouTubeApiError as error:
+            raise HTTPException(status_code=503, detail=error.detail) from error
+        if mode == "live":
+            youtube_search_cache_service.set(q, config.youtube.max_results, config.youtube.safe_search, raw_results)
+    evaluated = [filtering.evaluate_video(item).model_dump() for item in raw_results]
     search_history_service.add(q, result_count=len(evaluated), mode=mode)
     return {
         "query": q,
         "mode": mode,
-        "notice": None if mode == "live" else "YOUTUBE_API_KEY is not configured. Showing demo results.",
+        "notice": search_notice(mode),
         "results": evaluated,
     }
+
+
+def search_notice(mode: str) -> str | None:
+    if mode == "demo":
+        return "YOUTUBE_API_KEY is not configured. Showing demo results."
+    if mode == "cache":
+        return "Showing cached YouTube results."
+    return None
 
 
 @app.get("/api/youtube/history")
@@ -485,6 +515,35 @@ async def read_parent_storage(request: ParentPinRequest, http_request: Request) 
 async def read_parent_monitoring(request: ParentPinRequest, http_request: Request) -> SystemMonitoring:
     verify_parent_pin(request.pin, http_request)
     return read_system_monitoring()
+
+
+@app.post("/api/parent/wifi/status")
+async def read_parent_wifi_status(request: ParentPinRequest, http_request: Request) -> WifiStatus:
+    verify_parent_pin(request.pin, http_request)
+    try:
+        return wifi_manager.status()
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+
+@app.post("/api/parent/wifi/scan")
+async def scan_parent_wifi(request: ParentPinRequest, http_request: Request) -> dict[str, list[WifiNetwork]]:
+    verify_parent_pin(request.pin, http_request)
+    try:
+        return {"networks": wifi_manager.scan()}
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+
+@app.post("/api/parent/wifi/connect")
+async def connect_parent_wifi(request: WifiConnectRequest, http_request: Request) -> WifiConnectResult:
+    verify_parent_pin(request.pin, http_request)
+    try:
+        return wifi_manager.connect(request.ssid, request.password)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 @app.post("/api/parent/terminal/start")

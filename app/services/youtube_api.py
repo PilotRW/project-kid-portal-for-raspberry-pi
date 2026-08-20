@@ -47,7 +47,7 @@ class YouTubeApiService:
                     "key": api_key,
                 },
             )
-            search_response.raise_for_status()
+            self._raise_for_api_error(search_response, "search")
             search_items = search_response.json().get("items", [])
             video_ids = [item["id"]["videoId"] for item in search_items if item.get("id", {}).get("videoId")]
             if not video_ids:
@@ -61,7 +61,7 @@ class YouTubeApiService:
                     "key": api_key,
                 },
             )
-            details_response.raise_for_status()
+            self._raise_for_api_error(details_response, "video details")
             details_by_id = {item["id"]: item for item in details_response.json().get("items", [])}
 
         return [
@@ -135,6 +135,23 @@ class YouTubeApiService:
         return "none"
 
     @staticmethod
+    def _raise_for_api_error(response: httpx.Response, operation: str) -> None:
+        if response.status_code < 400:
+            return
+        message = f"YouTube API {operation} failed with HTTP {response.status_code}."
+        reason = None
+        try:
+            error = response.json().get("error", {})
+            reason = error.get("message")
+        except ValueError:
+            reason = None
+        if response.status_code == 429:
+            message = "YouTube API quota is exhausted or rate-limited. Try again after the quota resets."
+        elif response.status_code in {400, 403} and reason:
+            message = f"YouTube API rejected the request: {reason}"
+        raise YouTubeApiError(status_code=response.status_code, detail=message)
+
+    @staticmethod
     def _thumbnail_url(thumbnails: dict) -> str | None:
         for size in ("medium", "high", "standard", "maxres", "default"):
             url = thumbnails.get(size, {}).get("url")
@@ -153,3 +170,10 @@ def parse_iso8601_duration(value: str | None) -> int | None:
     minutes = int(match.group("minutes") or 0)
     seconds = int(match.group("seconds") or 0)
     return hours * 3600 + minutes * 60 + seconds
+
+
+class YouTubeApiError(Exception):
+    def __init__(self, status_code: int, detail: str) -> None:
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(detail)

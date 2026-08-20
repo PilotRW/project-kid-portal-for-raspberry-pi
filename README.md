@@ -68,6 +68,8 @@ If `YOUTUBE_API_KEY` is missing, the YouTube search screen runs in demo mode and
 
 YouTube search history is stored as JSON. By default it uses `config/search-history.json` locally; on the Pi you can set `KID_PORTAL_SEARCH_HISTORY=/etc/kid-portal/search-history.json`.
 
+YouTube API search responses are cached for 7 days by default to avoid burning the small daily `search.list` quota on repeated searches. Local cache defaults to `config/youtube-search-cache.json`; on the Pi set `KID_PORTAL_YOUTUBE_SEARCH_CACHE=/etc/kid-portal/youtube-search-cache.json`. Override the TTL with `KID_PORTAL_YOUTUBE_SEARCH_CACHE_TTL_SECONDS`.
+
 Daily viewing limits count active YouTube playback, not kiosk uptime. The local default storage path is `config/usage.json`; on the Pi you can set `KID_PORTAL_USAGE=/etc/kid-portal/usage.json`.
 
 No allowlists, blocklists, PINs, or time limits are hardcoded in the app.
