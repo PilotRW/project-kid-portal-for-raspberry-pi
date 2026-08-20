@@ -1,7 +1,10 @@
+import json
 import os
+import re
 import shutil
 import subprocess
 import time
+from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -13,7 +16,7 @@ from pydantic import BaseModel
 
 from app.services.config_service import ConfigService, PortalConfig
 from app.services.display_manager import DisplayManager, DisplayStatus
-from app.services.filtering_engine import FilteringEngine
+from app.services.filtering_engine import Decision, EvaluatedVideo, FilteringEngine, VideoCandidate
 from app.services.network_info import NetworkInfoService
 from app.services.policy_manager import PolicyManager
 from app.services.search_history import SearchHistoryService
@@ -36,12 +39,15 @@ wifi_manager = WifiManager()
 display_manager = DisplayManager()
 youtube_key_manager = YouTubeKeyManager()
 THUMBNAIL_HOSTS = {"i.ytimg.com", "s.ytimg.com"}
+YOUTUBE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,32}$")
 NETWORK_ACCESS_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_REQUEST", "/run/kid-portal/network-access.request"))
 NETWORK_ACCESS_STATE_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_STATE", "/run/kid-portal/network-access.state"))
 ADMIN_PIN_MAX_ATTEMPTS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_MAX_ATTEMPTS", "8"))
 ADMIN_PIN_FINDTIME_SECONDS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_FINDTIME_SECONDS", "600"))
 ADMIN_PIN_LOCKOUT_SECONDS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_LOCKOUT_SECONDS", "600"))
+VIEWING_APPROVAL_SECONDS = int(os.environ.get("KID_PORTAL_VIEWING_APPROVAL_SECONDS", "1800"))
 admin_pin_attempts: dict[str, dict[str, object]] = {}
+approved_youtube_videos: dict[str, float] = {}
 
 app = FastAPI(title="Kid Portal", version="0.1.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -225,13 +231,12 @@ def get_config() -> PortalConfig:
     return config_service.load()
 
 
-def run_systemctl_sequence(commands: list[list[str]]) -> None:
-    for command in commands:
-        subprocess.run(command, check=True, timeout=30)
-
-
 def run_software_update() -> None:
     subprocess.run(["sudo", "-n", "/usr/local/sbin/kid-portal-software-update"], check=True, timeout=7200)
+
+
+def run_kiosk_control(action: str) -> None:
+    subprocess.run(["sudo", "-n", "/usr/local/sbin/kid-portal-kiosk-control", action], check=True, timeout=60)
 
 
 def read_storage_info() -> StorageInfo:
@@ -323,18 +328,53 @@ def set_network_access_state(enabled: bool) -> NetworkAccessState:
     return NetworkAccessState(content_lan_enabled=enabled)
 
 
-def render_watch_page(video_id: str, limit_reached: bool = False) -> str:
-    iframe_src = "" if limit_reached else (
-        f"https://www.youtube-nocookie.com/embed/{video_id}"
+def render_watch_page(video_id: str, limit_reached: bool = False, blocked_message: str | None = None) -> str:
+    safe_video_id = escape(video_id, quote=True)
+    iframe_src = "" if limit_reached or blocked_message else (
+        f"https://www.youtube-nocookie.com/embed/{safe_video_id}"
         "?autoplay=1&rel=0&modestbranding=1&playsinline=1&disablekb=1&fs=1&enablejsapi=1&origin=http://127.0.0.1:8080"
     )
     return (
         (STATIC_DIR / "watch.html")
         .read_text(encoding="utf-8")
-        .replace("__VIDEO_ID__", video_id)
+        .replace("__VIDEO_ID__", safe_video_id)
         .replace("__IFRAME_SRC__", iframe_src)
         .replace("__LIMIT_REACHED__", "true" if limit_reached else "false")
+        .replace("__BLOCKED_MESSAGE_JSON__", json.dumps(blocked_message or ""))
     )
+
+
+def approve_youtube_video(video_id: str) -> None:
+    approved_youtube_videos[video_id] = time.time() + VIEWING_APPROVAL_SECONDS
+
+
+def is_youtube_video_approved(video_id: str) -> bool:
+    expires_at = approved_youtube_videos.get(video_id)
+    if not expires_at:
+        return False
+    if expires_at <= time.time():
+        approved_youtube_videos.pop(video_id, None)
+        return False
+    return True
+
+
+async def load_youtube_candidate(video_id: str) -> VideoCandidate | None:
+    cached = youtube_search_cache_service.find_video(video_id)
+    if cached:
+        return cached
+    try:
+        return await youtube_service.get_video(video_id)
+    except YouTubeApiError as error:
+        raise HTTPException(status_code=503, detail=error.detail) from error
+
+
+async def evaluate_youtube_video_for_playback(video_id: str) -> EvaluatedVideo:
+    if not YOUTUBE_VIDEO_ID_RE.match(video_id):
+        raise HTTPException(status_code=400, detail="Invalid YouTube video id")
+    candidate = await load_youtube_candidate(video_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail="YouTube video is not available")
+    return FilteringEngine(get_config().filtering).evaluate_video(candidate)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -447,7 +487,8 @@ async def proxy_youtube_thumbnail(url: str = Query(min_length=1, max_length=500)
 
 
 @app.delete("/api/youtube/history")
-async def clear_youtube_history() -> dict[str, str]:
+async def clear_youtube_history(request: ParentPinRequest, http_request: Request) -> dict[str, str]:
+    verify_parent_pin(request.pin, http_request)
     search_history_service.clear()
     return {"status": "cleared"}
 
@@ -457,6 +498,10 @@ async def unlock_youtube_approval(request: ViewPinRequest) -> dict[str, str]:
     verify_view_pin(request.pin)
     if request.video_id.startswith("demo-"):
         raise HTTPException(status_code=400, detail="Demo result cannot be played")
+    evaluated = await evaluate_youtube_video_for_playback(request.video_id)
+    if evaluated.decision == Decision.BLOCK:
+        raise HTTPException(status_code=403, detail="Video is blocked by Kid Portal filters")
+    approve_youtube_video(request.video_id)
     return {"status": "unlocked", "watch_url": f"/youtube/watch/{request.video_id}"}
 
 
@@ -605,32 +650,14 @@ async def connect_parent_wifi(request: WifiConnectRequest, http_request: Request
 @app.post("/api/parent/terminal/start")
 async def start_debug_terminal(request: ParentPinRequest, http_request: Request, background_tasks: BackgroundTasks) -> SystemActionResult:
     verify_parent_pin(request.pin, http_request)
-    background_tasks.add_task(
-        run_systemctl_sequence,
-        [
-            ["sudo", "-n", "systemctl", "stop", "kid-portal-kiosk.service"],
-            ["sudo", "-n", "systemctl", "stop", "kid-portal-x.service"],
-            ["sudo", "-n", "systemctl", "unmask", "getty@tty1.service"],
-            ["sudo", "-n", "systemctl", "reset-failed", "getty@tty1.service"],
-            ["sudo", "-n", "systemctl", "start", "getty@tty1.service"],
-        ],
-    )
+    background_tasks.add_task(run_kiosk_control, "terminal")
     return SystemActionResult(status="terminal_starting")
 
 
 @app.post("/api/parent/kiosk/start")
 async def return_to_kiosk(request: ParentPinRequest, http_request: Request, background_tasks: BackgroundTasks) -> SystemActionResult:
     verify_parent_pin(request.pin, http_request)
-    background_tasks.add_task(
-        run_systemctl_sequence,
-        [
-            ["sudo", "-n", "systemctl", "stop", "getty@tty1.service"],
-            ["sudo", "-n", "systemctl", "mask", "getty@tty1.service"],
-            ["sudo", "-n", "systemctl", "reset-failed", "getty@tty1.service", "kid-portal-x.service", "kid-portal-kiosk.service"],
-            ["sudo", "-n", "systemctl", "start", "kid-portal-x.service"],
-            ["sudo", "-n", "systemctl", "start", "kid-portal-kiosk.service"],
-        ],
-    )
+    background_tasks.add_task(run_kiosk_control, "kiosk")
     return SystemActionResult(status="kiosk_starting")
 
 
@@ -643,9 +670,16 @@ async def update_system_software(request: ParentPinRequest, http_request: Reques
 
 @app.get("/youtube/watch/{video_id}", response_class=HTMLResponse)
 async def watch_youtube(video_id: str) -> str:
+    if not YOUTUBE_VIDEO_ID_RE.match(video_id):
+        raise HTTPException(status_code=400, detail="Invalid YouTube video id")
     config = get_config()
     if usage_tracker_service.status(config.limits.daily_minutes).limit_reached:
         return render_watch_page(video_id, limit_reached=True)
+    evaluated = await evaluate_youtube_video_for_playback(video_id)
+    if evaluated.decision == Decision.BLOCK:
+        return render_watch_page(video_id, blocked_message="This video is blocked by Kid Portal filters.")
+    if evaluated.decision == Decision.REQUIRE_PARENT_APPROVAL and not is_youtube_video_approved(video_id):
+        return render_watch_page(video_id, blocked_message="Parent approval is required for this video.")
     return render_watch_page(video_id)
 
 

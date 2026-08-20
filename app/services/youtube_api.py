@@ -70,6 +70,26 @@ class YouTubeApiService:
             if details_by_id.get(item.get("id", {}).get("videoId"), {}).get("status", {}).get("embeddable", True)
         ]
 
+    async def get_video(self, video_id: str) -> VideoCandidate | None:
+        api_key = self._resolve_api_key()
+        if not api_key:
+            return next((video for video in self._demo_results(video_id) if video.video_id == video_id), None)
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                "https://www.googleapis.com/youtube/v3/videos",
+                params={
+                    "part": "snippet,contentDetails,status",
+                    "id": video_id,
+                    "key": api_key,
+                },
+            )
+            self._raise_for_api_error(response, "video details")
+            item = next(iter(response.json().get("items", [])), None)
+        if not item or not item.get("status", {}).get("embeddable", True):
+            return None
+        return self._candidate_from_details(item)
+
     def _candidate_from_item(self, item: dict, details_by_id: dict[str, dict]) -> VideoCandidate:
         video_id = item["id"]["videoId"]
         snippet = item["snippet"]
@@ -83,6 +103,20 @@ class YouTubeApiService:
             channel_id=snippet.get("channelId", ""),
             channel_title=snippet.get("channelTitle", ""),
             category=detail_snippet.get("categoryId"),
+            duration_seconds=parse_iso8601_duration(content_details.get("duration")),
+            thumbnail_url=self._thumbnail_url(snippet.get("thumbnails", {})),
+        )
+
+    def _candidate_from_details(self, item: dict) -> VideoCandidate:
+        snippet = item.get("snippet", {})
+        content_details = item.get("contentDetails", {})
+        return VideoCandidate(
+            video_id=item.get("id", ""),
+            title=snippet.get("title", ""),
+            description=snippet.get("description", ""),
+            channel_id=snippet.get("channelId", ""),
+            channel_title=snippet.get("channelTitle", ""),
+            category=snippet.get("categoryId"),
             duration_seconds=parse_iso8601_duration(content_details.get("duration")),
             thumbnail_url=self._thumbnail_url(snippet.get("thumbnails", {})),
         )

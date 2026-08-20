@@ -29,12 +29,17 @@
     <script>
       const allowedVideoId = document.querySelector("#youtube-player").dataset.videoId;
       const limitReachedOnLoad = __LIMIT_REACHED__;
+      const blockedMessage = __BLOCKED_MESSAGE_JSON__;
       let player = null;
       let guardTriggered = false;
       let usageSessionId = "";
       let lastPlayerState = "paused";
 
       async function onYouTubeIframeAPIReady() {
+        if (blockedMessage) {
+          showBlockedMessage(blockedMessage);
+          return;
+        }
         if (limitReachedOnLoad) {
           showUsageLimit();
           return;
@@ -106,6 +111,18 @@
         } catch (error) {
           // Cross-origin player control can fail while the iframe is unloading.
         }
+        document.querySelector("#youtube-player").removeAttribute("src");
+        window.setTimeout(() => {
+          window.location.href = "/#youtube";
+        }, 1800);
+      }
+
+      function showBlockedMessage(message) {
+        guardTriggered = true;
+        lastPlayerState = "paused";
+        const status = document.querySelector("#player-guard-status");
+        status.hidden = false;
+        status.textContent = message;
         document.querySelector("#youtube-player").removeAttribute("src");
         window.setTimeout(() => {
           window.location.href = "/#youtube";

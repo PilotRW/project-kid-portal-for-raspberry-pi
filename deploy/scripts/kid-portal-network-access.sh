@@ -3,7 +3,12 @@ set -eu
 
 REQUEST_FILE="/run/kid-portal/network-access.request"
 STATE_FILE="/run/kid-portal/network-access.state"
+LAN_CIDR_FILE="/etc/kid-portal/lan-cidr"
 LAN_CIDR="192.168.0.0/24"
+
+if [ -r "$LAN_CIDR_FILE" ]; then
+  LAN_CIDR="$(head -n 1 "$LAN_CIDR_FILE")"
+fi
 
 mkdir -p /run/kid-portal
 

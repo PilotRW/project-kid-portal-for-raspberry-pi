@@ -26,6 +26,8 @@ jobs:
           bash -n deploy/check-pi.sh
           bash -n deploy/scripts/pi-install.sh
           sh -n deploy/scripts/kid-portal-display-mode.sh
+          sh -n deploy/scripts/kid-portal-kiosk-control.sh
           sh -n deploy/scripts/kid-portal-network-access.sh
+          sh -n deploy/scripts/kid-portal-software-update.sh
           sh -n deploy/scripts/kid-portal-wifi.sh
           sh -n deploy/scripts/kid-portal-youtube-key.sh

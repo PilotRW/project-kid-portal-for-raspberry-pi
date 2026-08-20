@@ -49,6 +49,18 @@ class YouTubeSearchCacheService:
             return None
         return entry.results
 
+    def find_video(self, video_id: str) -> VideoCandidate | None:
+        entries = self._pruned_entries()
+        for value in entries.values():
+            try:
+                entry = YouTubeSearchCacheEntry.model_validate(value)
+            except ValueError:
+                continue
+            for video in entry.results:
+                if video.video_id == video_id:
+                    return video
+        return None
+
     def set(self, query: str, limit: int, safe_search: str, results: list[VideoCandidate]) -> None:
         entries = self._pruned_entries()
         now = datetime.now(UTC)

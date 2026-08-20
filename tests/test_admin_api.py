@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 import app.main as main_module
 from app.main import app
 from app.services.display_manager import DisplayStatus
+from app.services.filtering_engine import VideoCandidate
 from app.services.usage_tracker import UsageTrackerService
 from app.services.wifi_manager import WifiConnectResult, WifiNetwork, WifiStatus
 from app.services.youtube_key_manager import YouTubeKeyUpdateResult
@@ -10,6 +11,27 @@ from app.services.youtube_key_manager import YouTubeKeyUpdateResult
 
 def setup_function():
     main_module.admin_pin_attempts.clear()
+    main_module.approved_youtube_videos.clear()
+
+
+class FakeYouTubeLookup:
+    def __init__(self, candidates):
+        self.candidates = candidates
+
+    async def get_video(self, video_id):
+        return self.candidates.get(video_id)
+
+
+def video_candidate(video_id: str, title: str = "Science lesson for kids") -> VideoCandidate:
+    return VideoCandidate(
+        video_id=video_id,
+        title=title,
+        description="A calm educational video.",
+        channel_id="safe-channel",
+        channel_title="Safe Learning",
+        category="27",
+        duration_seconds=600,
+    )
 
 
 def test_admin_page_loads():
@@ -101,6 +123,23 @@ def test_terminal_controls_are_pin_protected():
 
     assert terminal.status_code == 403
     assert kiosk.status_code == 403
+
+
+def test_terminal_controls_use_kiosk_control_wrapper(monkeypatch):
+    actions = []
+
+    def fake_kiosk_control(action):
+        actions.append(action)
+
+    monkeypatch.setattr(main_module, "run_kiosk_control", fake_kiosk_control)
+    client = TestClient(app)
+
+    terminal = client.post("/api/parent/terminal/start", json={"pin": "1234"})
+    kiosk = client.post("/api/parent/kiosk/start", json={"pin": "1234"})
+
+    assert terminal.status_code == 200
+    assert kiosk.status_code == 200
+    assert actions == ["terminal", "kiosk"]
 
 
 def test_kiosk_settings_include_debug_terminal_controls():
@@ -363,7 +402,8 @@ def test_wifi_status_uses_pin(monkeypatch):
     assert response.json()["connection"] == "Home"
 
 
-def test_youtube_approval_uses_separate_viewing_pin():
+def test_youtube_approval_uses_separate_viewing_pin(monkeypatch):
+    monkeypatch.setattr(main_module, "youtube_service", FakeYouTubeLookup({"abc123": video_candidate("abc123")}))
     client = TestClient(app)
 
     parent_pin = client.post("/api/youtube/approval/unlock", json={"pin": "1234", "video_id": "abc123"})
@@ -382,6 +422,16 @@ def test_admin_history_clear_requires_valid_pin():
     assert response.status_code == 403
 
 
+def test_public_history_delete_requires_valid_pin():
+    client = TestClient(app)
+
+    missing_pin = client.delete("/api/youtube/history")
+    invalid_pin = client.request("DELETE", "/api/youtube/history", json={"pin": "0000"})
+
+    assert missing_pin.status_code == 422
+    assert invalid_pin.status_code == 403
+
+
 def test_thumbnail_proxy_rejects_unapproved_hosts():
     client = TestClient(app)
 
@@ -390,7 +440,8 @@ def test_thumbnail_proxy_rejects_unapproved_hosts():
     assert response.status_code == 400
 
 
-def test_watch_page_sandboxes_youtube_embed():
+def test_watch_page_sandboxes_youtube_embed(monkeypatch):
+    monkeypatch.setattr(main_module, "youtube_service", FakeYouTubeLookup({"video-123": video_candidate("video-123")}))
     client = TestClient(app)
 
     response = client.get("/youtube/watch/video-123")
@@ -402,6 +453,52 @@ def test_watch_page_sandboxes_youtube_embed():
     assert "enablejsapi=1" in response.text
     assert "guardCurrentVideo" in response.text
     assert "/api/usage/playback/heartbeat" in response.text
+
+
+def test_watch_page_blocks_filtered_video(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "youtube_service",
+        FakeYouTubeLookup({"video-123": video_candidate("video-123", title="Extreme prank challenge")}),
+    )
+    client = TestClient(app)
+
+    response = client.get("/youtube/watch/video-123")
+
+    assert response.status_code == 200
+    assert "This video is blocked by Kid Portal filters." in response.text
+    assert "youtube-nocookie.com/embed/video-123" not in response.text
+
+
+def test_watch_page_requires_parent_approval_for_default_decision(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "youtube_service",
+        FakeYouTubeLookup(
+            {
+                "unknown-123": VideoCandidate(
+                    video_id="unknown-123",
+                    title="Plain cartoon",
+                    description="",
+                    channel_id="plain-channel",
+                    channel_title="Plain Channel",
+                    category=None,
+                    duration_seconds=600,
+                )
+            }
+        ),
+    )
+    client = TestClient(app)
+
+    direct = client.get("/youtube/watch/unknown-123")
+    unlocked = client.post("/api/youtube/approval/unlock", json={"pin": "4321", "video_id": "unknown-123"})
+    approved = client.get("/youtube/watch/unknown-123")
+
+    assert direct.status_code == 200
+    assert "Parent approval is required for this video." in direct.text
+    assert unlocked.status_code == 200
+    assert approved.status_code == 200
+    assert "youtube-nocookie.com/embed/unknown-123" in approved.text
 
 
 def test_playback_usage_api_tracks_active_play(tmp_path, monkeypatch):

@@ -40,7 +40,9 @@
   },
   "filtering": {
     "allowed_channels": [
-      "Demo Learning Channel"
+      "Demo Learning Channel",
+      "CrunchLabs",
+      "TerraGreen"
     ],
     "allowed_keywords": [
       "science",
@@ -184,10 +186,10 @@
     "max_duration_seconds": 3600
   },
   "limits": {
-    "daily_minutes": 90
+    "daily_minutes": 180
   },
   "parent": {
-    "default_unrestricted_minutes": 30,
+    "default_unrestricted_minutes": 90,
     "pin_sha256": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
     "view_pin_sha256": "fe2592b42a727e977f055947385b709cc82b16b9a87f88c6abf3900d65d0cdc3"
   },

@@ -67,6 +67,9 @@ rsync -a --delete \
 chown -R "$PI_USER:$PI_USER" "$APP_DIR"
 
 install -d -m 755 "$CONFIG_DIR" /etc/chromium/policies/managed /etc/X11/xorg.conf.d /etc/sudoers.d
+printf "%s\n" "$LAN_CIDR" > "$CONFIG_DIR/lan-cidr"
+chown root:root "$CONFIG_DIR/lan-cidr"
+chmod 644 "$CONFIG_DIR/lan-cidr"
 if [[ ! -f "$CONFIG_DIR/config.json" ]]; then
   install -m 664 -o root -g "$PI_USER" "$APP_DIR/config/kid-portal.json" "$CONFIG_DIR/config.json"
 else
@@ -109,12 +112,15 @@ install -m 755 deploy/scripts/kid-portal-display-mode.sh /usr/local/sbin/kid-por
 install -m 755 deploy/scripts/kid-portal-wifi.sh /usr/local/sbin/kid-portal-wifi
 install -m 755 deploy/scripts/kid-portal-youtube-key.sh /usr/local/sbin/kid-portal-youtube-key
 install -m 755 deploy/scripts/kid-portal-software-update.sh /usr/local/sbin/kid-portal-software-update
+install -m 755 deploy/scripts/kid-portal-kiosk-control.sh /usr/local/sbin/kid-portal-kiosk-control
 install -m 440 deploy/sudoers/kid-portal-wifi /etc/sudoers.d/kid-portal-wifi
 install -m 440 deploy/sudoers/kid-portal-youtube-key /etc/sudoers.d/kid-portal-youtube-key
 install -m 440 deploy/sudoers/kid-portal-software-update /etc/sudoers.d/kid-portal-software-update
+install -m 440 deploy/sudoers/kid-portal-kiosk-control /etc/sudoers.d/kid-portal-kiosk-control
 visudo -cf /etc/sudoers.d/kid-portal-wifi
 visudo -cf /etc/sudoers.d/kid-portal-youtube-key
 visudo -cf /etc/sudoers.d/kid-portal-software-update
+visudo -cf /etc/sudoers.d/kid-portal-kiosk-control
 
 install -m 644 deploy/xorg/99-kid-portal.conf /etc/X11/xorg.conf.d/99-kid-portal.conf
 install -m 644 deploy/input/keyd-kid-portal.conf /etc/keyd/default.conf
