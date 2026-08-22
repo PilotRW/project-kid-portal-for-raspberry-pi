@@ -11,7 +11,7 @@ const saveStatus = document.querySelector("#save-status");
 const signOutButton = document.querySelector("#sign-out-admin");
 const saveBar = document.querySelector(".save-bar");
 const saveButton = document.querySelector("#save-config");
-const configTabs = new Set(["playback", "youtube", "websites"]);
+const configTabs = new Set(["security", "playback", "youtube", "websites"]);
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({

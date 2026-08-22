@@ -942,18 +942,22 @@ input {
 .keyboard {
   position: fixed;
   bottom: 0;
-  left: 50%;
+  left: auto;
+  right: auto;
+  inset-inline: max(0px, calc((100vw - var(--stage-width)) / 2));
   z-index: 10;
   display: grid;
   gap: 10px;
-  width: var(--stage-width);
+  width: auto;
+  max-width: var(--stage-width);
   max-height: calc(var(--stage-height) * 0.45);
+  margin-inline: auto;
   padding: 14px clamp(18px, 4vw, 46px) 18px;
   border-top: 2px solid rgba(255, 255, 255, 0.14);
   background: rgba(5, 12, 10, 0.97);
   box-shadow: 0 -18px 48px rgba(0, 0, 0, 0.34);
   overflow: auto;
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .keyboard[hidden] {

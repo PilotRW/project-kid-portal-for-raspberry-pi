@@ -249,7 +249,10 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert "display-mode" in response.text
     assert "apply-display-mode" in response.text
     assert 'id="keyboard"' in response.text
-    assert "app.js?v=20260822-01" in response.text
+    assert "styles.css?v=20260822-01" in response.text
+    assert "Security" in response.text
+    assert "YouTube approval" in response.text
+    assert "app.js?v=20260822-02" in response.text
 
 
 def test_remote_admin_includes_viewing_pin_control():
@@ -258,7 +261,9 @@ def test_remote_admin_includes_viewing_pin_control():
     response = client.get("/admin")
 
     assert response.status_code == 200
-    assert "PIN Codes" in response.text
+    assert 'data-tab-target="security"' in response.text
+    assert "Admin Access" in response.text
+    assert "Viewing Approval PIN" in response.text
     assert "parent-pin" in response.text
     assert "view-pin" in response.text
     assert "Time Limits" in response.text
@@ -283,7 +288,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "data-rule-filter=\"blocked_keywords\"" in response.text
     assert "data-rule-count=\"blocked_keywords\"" in response.text
     assert "admin.css?v=20260715-01" in response.text
-    assert "admin.js?v=20260822-01" in response.text
+    assert "admin.js?v=20260822-02" in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):

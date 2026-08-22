@@ -80,3 +80,10 @@ def test_parent_pin_recovery_tool_rejects_viewing_pin(tmp_path):
     assert result.returncode == 2
     assert data["parent"]["pin_sha256"] == "old"
     assert "different from viewing PIN" in result.stderr
+
+
+def test_keyboard_is_centered_against_kiosk_stage():
+    styles = (REPO_ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+
+    assert "inset-inline: max(0px, calc((100vw - var(--stage-width)) / 2));" in styles
+    assert "transform: none;" in styles
