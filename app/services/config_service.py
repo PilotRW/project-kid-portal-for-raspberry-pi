@@ -44,6 +44,9 @@ class ParentConfig(BaseModel):
     def verify_pin(self, pin: str) -> bool:
         return hashlib.sha256(pin.encode("utf-8")).hexdigest() == self.pin_sha256
 
+    def set_pin(self, pin: str) -> None:
+        self.pin_sha256 = hashlib.sha256(pin.encode("utf-8")).hexdigest()
+
     def verify_view_pin(self, pin: str) -> bool:
         return hashlib.sha256(pin.encode("utf-8")).hexdigest() == self.view_pin_sha256
 

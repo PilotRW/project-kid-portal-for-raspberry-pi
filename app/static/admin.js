@@ -209,6 +209,7 @@ function renderSettings() {
   document.querySelector("#youtube-region-code").value = adminState.config.youtube.region_code;
   document.querySelector("#default-decision").value = adminState.config.filtering.default_decision || "REQUIRE_PARENT_APPROVAL";
   document.querySelector("#display-mode").value = adminState.config.display?.mode || "1080p";
+  document.querySelector("#parent-pin").value = "";
   document.querySelector("#view-pin").value = "";
 }
 
@@ -370,18 +371,37 @@ function formatBytes(bytes) {
 async function saveConfig() {
   saveStatus.textContent = "Saving...";
   syncSettings();
+  const parentPin = document.querySelector("#parent-pin").value.trim();
   const viewPin = document.querySelector("#view-pin").value.trim();
+  if (parentPin && !/^\d{4,12}$/.test(parentPin)) {
+    saveStatus.textContent = "Parent PIN must be 4-12 digits.";
+    return;
+  }
   if (viewPin && !/^\d{4,12}$/.test(viewPin)) {
     saveStatus.textContent = "Viewing PIN must be 4-12 digits.";
+    return;
+  }
+  if (parentPin && viewPin && parentPin === viewPin) {
+    saveStatus.textContent = "Parent PIN and viewing PIN must be different.";
     return;
   }
   const response = await fetch("/api/parent/config", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pin: adminState.pin, config: adminState.config, view_pin: viewPin || null }),
+    body: JSON.stringify({
+      pin: adminState.pin,
+      config: adminState.config,
+      parent_pin: parentPin || null,
+      view_pin: viewPin || null,
+    }),
   });
   saveStatus.textContent = response.ok ? "Saved." : "Save failed.";
   if (response.ok) {
+    if (parentPin) {
+      adminState.pin = parentPin;
+      sessionStorage.setItem("kidPortalAdminPin", parentPin);
+    }
+    document.querySelector("#parent-pin").value = "";
     document.querySelector("#view-pin").value = "";
     await loadAdminState();
   }

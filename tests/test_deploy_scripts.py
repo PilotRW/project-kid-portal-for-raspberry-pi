@@ -1,3 +1,7 @@
+import hashlib
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -33,3 +37,46 @@ def test_filter_insights_is_deployed():
 
     assert "filter-insights.json" in installer
     assert "KID_PORTAL_FILTER_INSIGHTS" in installer
+
+
+def test_parent_pin_recovery_tool_is_installed_without_web_sudoers():
+    installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+
+    assert "kid-portal-reset-parent-pin.py /usr/local/sbin/kid-portal-reset-parent-pin" in installer
+    assert "sudoers/kid-portal-reset-parent-pin" not in installer
+
+
+def test_parent_pin_recovery_tool_updates_config(tmp_path):
+    config_path = tmp_path / "config.json"
+    view_hash = hashlib.sha256("1357".encode("utf-8")).hexdigest()
+    config_path.write_text(json.dumps({"parent": {"pin_sha256": "old", "view_pin_sha256": view_hash}}), encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "deploy/scripts/kid-portal-reset-parent-pin.py"), "2468", str(config_path)],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    assert result.returncode == 0
+    assert data["parent"]["pin_sha256"] == hashlib.sha256("2468".encode("utf-8")).hexdigest()
+    assert data["parent"]["view_pin_sha256"] == view_hash
+
+
+def test_parent_pin_recovery_tool_rejects_viewing_pin(tmp_path):
+    config_path = tmp_path / "config.json"
+    view_hash = hashlib.sha256("1357".encode("utf-8")).hexdigest()
+    config_path.write_text(json.dumps({"parent": {"pin_sha256": "old", "view_pin_sha256": view_hash}}), encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "deploy/scripts/kid-portal-reset-parent-pin.py"), "1357", str(config_path)],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    assert result.returncode == 2
+    assert data["parent"]["pin_sha256"] == "old"
+    assert "different from viewing PIN" in result.stderr

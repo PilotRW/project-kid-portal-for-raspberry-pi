@@ -121,6 +121,7 @@ install -m 755 deploy/scripts/kid-portal-wifi.sh /usr/local/sbin/kid-portal-wifi
 install -m 755 deploy/scripts/kid-portal-youtube-key.sh /usr/local/sbin/kid-portal-youtube-key
 install -m 755 deploy/scripts/kid-portal-software-update.sh /usr/local/sbin/kid-portal-software-update
 install -m 755 deploy/scripts/kid-portal-kiosk-control.sh /usr/local/sbin/kid-portal-kiosk-control
+install -m 755 deploy/scripts/kid-portal-reset-parent-pin.py /usr/local/sbin/kid-portal-reset-parent-pin
 install -m 440 deploy/sudoers/kid-portal-wifi /etc/sudoers.d/kid-portal-wifi
 install -m 440 deploy/sudoers/kid-portal-youtube-key /etc/sudoers.d/kid-portal-youtube-key
 install -m 440 deploy/sudoers/kid-portal-software-update /etc/sudoers.d/kid-portal-software-update

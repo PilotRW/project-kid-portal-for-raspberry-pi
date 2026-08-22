@@ -87,6 +87,14 @@ Daily viewing limits count active YouTube playback, not kiosk uptime. The local 
 
 No allowlists, blocklists, PINs, or time limits are hardcoded in the app.
 
+If the parent/admin PIN is forgotten, reset it from a trusted local shell or SSH session on the Pi:
+
+```bash
+sudo kid-portal-reset-parent-pin 1234
+```
+
+This recovery tool edits `/etc/kid-portal/config.json` directly and is not exposed to the web app or sudoers rules.
+
 ## Raspberry Pi Deployment
 
 Start with [docs/sd-card-prep.md](/Users/pilotrw/GITHUB/project-kid-portal-for-raspberry-pi/docs/sd-card-prep.md), then continue with [docs/raspberry-pi-setup.md](/Users/pilotrw/GITHUB/project-kid-portal-for-raspberry-pi/docs/raspberry-pi-setup.md).

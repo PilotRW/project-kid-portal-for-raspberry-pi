@@ -60,6 +60,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 class ParentConfigUpdate(BaseModel):
     pin: str
     config: PortalConfig
+    parent_pin: str | None = None
     view_pin: str | None = None
 
 
@@ -407,12 +408,32 @@ async def write_config(config: PortalConfig) -> dict[str, str]:
 @app.put("/api/parent/config")
 async def write_parent_config(update: ParentConfigUpdate, http_request: Request) -> dict[str, str]:
     verify_parent_pin(update.pin, http_request)
-    if update.view_pin:
-        view_pin = update.view_pin.strip()
-        if len(view_pin) < 4 or len(view_pin) > 12 or not view_pin.isdigit():
-            raise HTTPException(status_code=400, detail="Viewing PIN must be 4-12 digits")
-        if update.config.parent.verify_pin(view_pin):
-            raise HTTPException(status_code=400, detail="Viewing PIN must be different from parent PIN")
+    current_config = get_config()
+    parent_pin = update.parent_pin.strip() if update.parent_pin else ""
+    view_pin = update.view_pin.strip() if update.view_pin else ""
+
+    if parent_pin and (len(parent_pin) < 4 or len(parent_pin) > 12 or not parent_pin.isdigit()):
+        raise HTTPException(status_code=400, detail="Parent PIN must be 4-12 digits")
+
+    if view_pin and (len(view_pin) < 4 or len(view_pin) > 12 or not view_pin.isdigit()):
+        raise HTTPException(status_code=400, detail="Viewing PIN must be 4-12 digits")
+
+    if parent_pin and view_pin and parent_pin == view_pin:
+        raise HTTPException(status_code=400, detail="Parent PIN and viewing PIN must be different")
+
+    if parent_pin and current_config.parent.verify_view_pin(parent_pin):
+        raise HTTPException(status_code=400, detail="Parent PIN must be different from viewing PIN")
+
+    if view_pin and current_config.parent.verify_pin(view_pin):
+        raise HTTPException(status_code=400, detail="Viewing PIN must be different from parent PIN")
+
+    update.config.parent.pin_sha256 = current_config.parent.pin_sha256
+    update.config.parent.view_pin_sha256 = current_config.parent.view_pin_sha256
+
+    if parent_pin:
+        update.config.parent.set_pin(parent_pin)
+
+    if view_pin:
         update.config.parent.set_view_pin(view_pin)
     config_service.save(update.config)
     return {"status": "saved"}

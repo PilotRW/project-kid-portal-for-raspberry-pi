@@ -113,6 +113,69 @@ def test_admin_state_accepts_parent_pin_without_exposing_key():
     assert "api_key" not in payload["youtube"]
 
 
+def test_parent_config_can_change_parent_pin(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.json"
+    original_config = main_module.config_service.load()
+    config_path.write_text(original_config.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr(main_module.config_service, "config_path", config_path)
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/parent/config",
+        json={"pin": "1234", "config": original_config.model_dump(mode="json"), "parent_pin": "2468"},
+    )
+
+    assert response.status_code == 200
+    assert client.post("/api/admin/state", json={"pin": "1234"}).status_code == 403
+    assert client.post("/api/admin/state", json={"pin": "2468"}).status_code == 200
+    saved_config = main_module.config_service.load()
+    assert saved_config.parent.verify_pin("2468")
+    assert not saved_config.parent.verify_pin("1234")
+
+
+def test_parent_config_rejects_matching_parent_and_viewing_pins(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.json"
+    original_config = main_module.config_service.load()
+    config_path.write_text(original_config.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr(main_module.config_service, "config_path", config_path)
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/parent/config",
+        json={
+            "pin": "1234",
+            "config": original_config.model_dump(mode="json"),
+            "parent_pin": "2468",
+            "view_pin": "2468",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "different" in response.json()["detail"]
+
+
+def test_parent_config_ignores_direct_pin_hash_overwrite(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.json"
+    original_config = main_module.config_service.load()
+    config_path.write_text(original_config.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr(main_module.config_service, "config_path", config_path)
+    payload_config = original_config.model_copy(deep=True)
+    payload_config.parent.set_pin("9999")
+    payload_config.parent.set_view_pin("8888")
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/parent/config",
+        json={"pin": "1234", "config": payload_config.model_dump(mode="json")},
+    )
+
+    assert response.status_code == 200
+    saved_config = main_module.config_service.load()
+    assert saved_config.parent.verify_pin("1234")
+    assert not saved_config.parent.verify_pin("9999")
+    assert not saved_config.parent.verify_view_pin("8888")
+
+
 def test_parent_storage_requires_valid_pin():
     client = TestClient(app)
 
@@ -179,13 +242,14 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert "return-to-kiosk" in response.text
     assert "refresh-monitoring" in response.text
     assert "view-approval-form" in response.text
+    assert "parent-pin" in response.text
     assert "view-pin" in response.text
     assert "wifi-form" in response.text
     assert "scan-wifi" in response.text
     assert "display-mode" in response.text
     assert "apply-display-mode" in response.text
     assert 'id="keyboard"' in response.text
-    assert "app.js?v=20260820-04" in response.text
+    assert "app.js?v=20260822-01" in response.text
 
 
 def test_remote_admin_includes_viewing_pin_control():
@@ -194,7 +258,8 @@ def test_remote_admin_includes_viewing_pin_control():
     response = client.get("/admin")
 
     assert response.status_code == 200
-    assert "Viewing PIN" in response.text
+    assert "PIN Codes" in response.text
+    assert "parent-pin" in response.text
     assert "view-pin" in response.text
     assert "Time Limits" in response.text
     assert "YouTube Search" in response.text
@@ -218,7 +283,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "data-rule-filter=\"blocked_keywords\"" in response.text
     assert "data-rule-count=\"blocked_keywords\"" in response.text
     assert "admin.css?v=20260715-01" in response.text
-    assert "admin.js?v=20260820-05" in response.text
+    assert "admin.js?v=20260822-01" in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):

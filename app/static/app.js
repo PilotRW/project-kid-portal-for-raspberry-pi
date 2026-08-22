@@ -410,6 +410,7 @@ function renderFilterSettings() {
   document.querySelector("#youtube-safe-search").value = state.editableConfig.youtube.safe_search;
   document.querySelector("#youtube-region-code").value = state.editableConfig.youtube.region_code;
   document.querySelector("#default-decision").value = state.editableConfig.filtering.default_decision || "REQUIRE_PARENT_APPROVAL";
+  document.querySelector("#parent-pin").value = "";
   document.querySelector("#view-pin").value = "";
 }
 
@@ -764,19 +765,37 @@ function addUniqueConfigValue(field, value) {
 async function saveParentConfig() {
   const status = document.querySelector("#settings-status");
   syncFilterSettings();
+  const parentPin = document.querySelector("#parent-pin").value.trim();
   const viewPin = document.querySelector("#view-pin").value.trim();
+  if (parentPin && !/^\d{4,12}$/.test(parentPin)) {
+    status.textContent = "Parent PIN must be 4-12 digits.";
+    return;
+  }
   if (viewPin && !/^\d{4,12}$/.test(viewPin)) {
     status.textContent = "Viewing PIN must be 4-12 digits.";
+    return;
+  }
+  if (parentPin && viewPin && parentPin === viewPin) {
+    status.textContent = "Parent PIN and viewing PIN must be different.";
     return;
   }
   status.textContent = "Saving rules...";
   const response = await fetch("/api/parent/config", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pin: state.parentPin, config: state.editableConfig, view_pin: viewPin || null }),
+    body: JSON.stringify({
+      pin: state.parentPin,
+      config: state.editableConfig,
+      parent_pin: parentPin || null,
+      view_pin: viewPin || null,
+    }),
   });
   status.textContent = response.ok ? "Rules saved." : "Save failed.";
   if (response.ok) {
+    if (parentPin) {
+      state.parentPin = parentPin;
+    }
+    document.querySelector("#parent-pin").value = "";
     document.querySelector("#view-pin").value = "";
     loadTiles();
   }
