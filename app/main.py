@@ -46,6 +46,7 @@ THUMBNAIL_HOSTS = {"i.ytimg.com", "s.ytimg.com"}
 YOUTUBE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,32}$")
 NETWORK_ACCESS_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_REQUEST", "/run/kid-portal/network-access.request"))
 NETWORK_ACCESS_STATE_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_STATE", "/run/kid-portal/network-access.state"))
+SOFTWARE_UPDATE_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_SOFTWARE_UPDATE_REQUEST", "/run/kid-portal/software-update.request"))
 SOFTWARE_UPDATE_LOG_PATH = Path(os.environ.get("KID_PORTAL_SOFTWARE_UPDATE_LOG", "/var/log/kid-portal-software-update.log"))
 ADMIN_PIN_MAX_ATTEMPTS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_MAX_ATTEMPTS", "8"))
 ADMIN_PIN_FINDTIME_SECONDS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_FINDTIME_SECONDS", "600"))
@@ -248,7 +249,8 @@ def get_config() -> PortalConfig:
 
 
 def run_software_update() -> None:
-    subprocess.run(["sudo", "-n", "/usr/local/sbin/kid-portal-software-update"], check=True, timeout=7200)
+    SOFTWARE_UPDATE_REQUEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SOFTWARE_UPDATE_REQUEST_PATH.write_text(f"start {int(time.time())}\n", encoding="utf-8")
 
 
 def is_software_update_running() -> bool:

@@ -3,6 +3,7 @@ set -eu
 
 LOG_FILE="/var/log/kid-portal-software-update.log"
 LOCK_FILE="/run/kid-portal-software-update.lock"
+REQUEST_FILE="/run/kid-portal/software-update.request"
 
 touch "$LOG_FILE"
 chown root:pi "$LOG_FILE"
@@ -13,6 +14,7 @@ if ! flock -n 9; then
   echo "$(date -Is) Kid Portal software update is already running." >> "$LOG_FILE"
   exit 75
 fi
+rm -f "$REQUEST_FILE"
 
 export DEBIAN_FRONTEND=noninteractive
 

@@ -1,0 +1,8 @@
+[Unit]
+Description=Run Kid Portal Raspberry Pi software update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/kid-portal-software-update

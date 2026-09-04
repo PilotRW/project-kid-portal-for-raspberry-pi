@@ -44,9 +44,15 @@ def test_filter_insights_is_deployed():
 
 def test_software_update_log_is_readable_by_portal_user():
     script = (REPO_ROOT / "deploy/scripts/kid-portal-software-update.sh").read_text(encoding="utf-8")
+    installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+    checker = (REPO_ROOT / "deploy/check-pi.sh").read_text(encoding="utf-8")
 
     assert 'chown root:pi "$LOG_FILE"' in script
     assert 'chmod 640 "$LOG_FILE"' in script
+    assert 'REQUEST_FILE="/run/kid-portal/software-update.request"' in script
+    assert 'rm -f "$REQUEST_FILE"' in script
+    assert "kid-portal-software-update.path" in installer
+    assert "kid-portal-software-update.path" in checker
 
 
 def test_parent_pin_recovery_tool_is_installed_without_web_sudoers():

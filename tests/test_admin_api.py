@@ -370,12 +370,21 @@ def test_display_update_rejects_unknown_mode():
 
 
 def test_software_update_requires_valid_pin(monkeypatch):
-    called = []
+    requests = []
 
-    def fake_update():
-        called.append(True)
+    class FakePath:
+        parent = None
 
-    monkeypatch.setattr(main_module, "run_software_update", fake_update)
+        def __init__(self):
+            self.parent = self
+
+        def mkdir(self, parents=False, exist_ok=False):
+            requests.append(("mkdir", parents, exist_ok))
+
+        def write_text(self, value, encoding=None):
+            requests.append(("write", value, encoding))
+
+    monkeypatch.setattr(main_module, "SOFTWARE_UPDATE_REQUEST_PATH", FakePath())
     client = TestClient(app)
 
     rejected = client.post("/api/parent/software/update", json={"pin": "0000"})
@@ -384,7 +393,9 @@ def test_software_update_requires_valid_pin(monkeypatch):
     assert rejected.status_code == 403
     assert accepted.status_code == 200
     assert accepted.json()["status"] == "software_update_started"
-    assert called == [True]
+    assert requests[0] == ("mkdir", True, True)
+    assert requests[1][0] == "write"
+    assert requests[1][1].startswith("start ")
 
 
 def test_software_update_status_requires_pin_and_returns_log(monkeypatch, tmp_path):

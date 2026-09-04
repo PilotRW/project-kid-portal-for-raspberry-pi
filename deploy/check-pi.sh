@@ -17,7 +17,7 @@ hostname
 ip -4 -brief addr
 echo
 echo "== Services =="
-systemctl is-active ssh fail2ban kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-x.service kid-portal-kiosk.service
+systemctl is-active ssh fail2ban kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-x.service kid-portal-kiosk.service
 echo
 echo "== UFW =="
 sudo ufw status

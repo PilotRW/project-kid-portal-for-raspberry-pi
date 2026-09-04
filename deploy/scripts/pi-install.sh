@@ -144,7 +144,7 @@ sshd -t
 
 systemctl daemon-reload
 systemctl enable fail2ban keyd ssh
-systemctl enable kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-x.service kid-portal-kiosk.service
+systemctl enable kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-x.service kid-portal-kiosk.service
 
 ufw allow from "$LAN_CIDR" to any port 22 proto tcp
 ufw allow from "$LAN_CIDR" to any port 80 proto tcp
@@ -152,7 +152,7 @@ ufw delete allow 8080/tcp >/dev/null 2>&1 || true
 ufw delete allow from "$LAN_CIDR" to any port 8080 proto tcp >/dev/null 2>&1 || true
 ufw --force enable
 
-systemctl restart ssh fail2ban keyd kid-portal.service kid-portal-admin.service kid-portal-network-access.path
+systemctl restart ssh fail2ban keyd kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path
 write_chromium_policy
 systemctl restart kid-portal-x.service kid-portal-kiosk.service
 
