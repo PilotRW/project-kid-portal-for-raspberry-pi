@@ -4,6 +4,10 @@ set -eu
 LOG_FILE="/var/log/kid-portal-software-update.log"
 LOCK_FILE="/run/kid-portal-software-update.lock"
 
+touch "$LOG_FILE"
+chown root:pi "$LOG_FILE"
+chmod 640 "$LOG_FILE"
+
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
   echo "$(date -Is) Kid Portal software update is already running." >> "$LOG_FILE"

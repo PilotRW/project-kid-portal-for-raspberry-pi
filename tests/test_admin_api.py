@@ -210,9 +210,13 @@ def test_terminal_controls_are_pin_protected():
 
     terminal = client.post("/api/parent/terminal/start", json={"pin": "0000"})
     kiosk = client.post("/api/parent/kiosk/start", json={"pin": "0000"})
+    restart = client.post("/api/parent/kiosk/restart", json={"pin": "0000"})
+    reboot = client.post("/api/parent/system/reboot", json={"pin": "0000"})
 
     assert terminal.status_code == 403
     assert kiosk.status_code == 403
+    assert restart.status_code == 403
+    assert reboot.status_code == 403
 
 
 def test_terminal_controls_use_kiosk_control_wrapper(monkeypatch):
@@ -226,10 +230,14 @@ def test_terminal_controls_use_kiosk_control_wrapper(monkeypatch):
 
     terminal = client.post("/api/parent/terminal/start", json={"pin": "1234"})
     kiosk = client.post("/api/parent/kiosk/start", json={"pin": "1234"})
+    restart = client.post("/api/parent/kiosk/restart", json={"pin": "1234"})
+    reboot = client.post("/api/parent/system/reboot", json={"pin": "1234"})
 
     assert terminal.status_code == 200
     assert kiosk.status_code == 200
-    assert actions == ["terminal", "kiosk"]
+    assert restart.status_code == 200
+    assert reboot.status_code == 200
+    assert actions == ["terminal", "kiosk", "restart-kiosk", "reboot"]
 
 
 def test_kiosk_settings_include_debug_terminal_controls():
@@ -240,6 +248,8 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert response.status_code == 200
     assert "exit-to-terminal" in response.text
     assert "return-to-kiosk" in response.text
+    assert "restart-kiosk" in response.text
+    assert "reboot-system" in response.text
     assert "refresh-monitoring" in response.text
     assert "view-approval-form" in response.text
     assert "parent-pin" in response.text
@@ -252,7 +262,7 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert "styles.css?v=20260822-01" in response.text
     assert "Security" in response.text
     assert "YouTube approval" in response.text
-    assert "app.js?v=20260822-02" in response.text
+    assert "app.js?v=20260831-01" in response.text
 
 
 def test_remote_admin_includes_viewing_pin_control():
@@ -277,8 +287,12 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "tab-nav" in response.text
     assert "Blocked Categories" in response.text
     assert "Debug Terminal" in response.text
+    assert "restart-kiosk" in response.text
+    assert "reboot-system" in response.text
     assert "Raspberry Pi Software" in response.text
     assert "update-system-software" in response.text
+    assert "software-update-state" in response.text
+    assert "software-update-log" in response.text
     assert "Display" in response.text
     assert "display-mode" in response.text
     assert "Sign out" in response.text
@@ -287,8 +301,8 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "content-lan-url" in response.text
     assert "data-rule-filter=\"blocked_keywords\"" in response.text
     assert "data-rule-count=\"blocked_keywords\"" in response.text
-    assert "admin.css?v=20260715-01" in response.text
-    assert "admin.js?v=20260822-02" in response.text
+    assert "admin.css?v=20260904-01" in response.text
+    assert "admin.js?v=20260904-01" in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):
@@ -371,6 +385,24 @@ def test_software_update_requires_valid_pin(monkeypatch):
     assert accepted.status_code == 200
     assert accepted.json()["status"] == "software_update_started"
     assert called == [True]
+
+
+def test_software_update_status_requires_pin_and_returns_log(monkeypatch, tmp_path):
+    log_path = tmp_path / "software-update.log"
+    log_path.write_text("apt-get update\napt-get full-upgrade\nfinished\n", encoding="utf-8")
+    monkeypatch.setattr(main_module, "SOFTWARE_UPDATE_LOG_PATH", log_path)
+    monkeypatch.setattr(main_module, "is_software_update_running", lambda: True)
+    client = TestClient(app)
+
+    rejected = client.post("/api/parent/software/update/status", json={"pin": "0000"})
+    accepted = client.post("/api/parent/software/update/status", json={"pin": "1234"})
+
+    assert rejected.status_code == 403
+    assert accepted.status_code == 200
+    assert accepted.json()["running"] is True
+    assert accepted.json()["exists"] is True
+    assert accepted.json()["log_path"] == str(log_path)
+    assert "apt-get full-upgrade" in accepted.json()["log"]
 
 
 def test_youtube_key_update_requires_valid_pin():

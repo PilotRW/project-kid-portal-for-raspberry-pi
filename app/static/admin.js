@@ -12,6 +12,7 @@ const signOutButton = document.querySelector("#sign-out-admin");
 const saveBar = document.querySelector(".save-bar");
 const saveButton = document.querySelector("#save-config");
 const configTabs = new Set(["security", "playback", "youtube", "websites"]);
+let softwareUpdatePollTimer = null;
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -47,6 +48,10 @@ async function loadAdminState() {
   const data = await postJson("/api/admin/state", { pin: adminState.pin });
   adminState.config = data.config;
   renderState(data);
+  const softwareStatus = await loadSoftwareUpdateStatus({ silent: true });
+  if (softwareStatus?.running) {
+    startSoftwareUpdatePolling();
+  }
   loginCard.hidden = true;
   adminPanel.hidden = false;
   signOutButton.hidden = false;
@@ -427,6 +432,83 @@ async function returnToKiosk() {
   }
 }
 
+async function restartKiosk() {
+  const confirmed = window.confirm("Restart the kiosk browser on the Raspberry Pi display?");
+  if (!confirmed) return;
+  saveStatus.textContent = "Restarting kiosk...";
+  try {
+    await postJson("/api/parent/kiosk/restart", { pin: adminState.pin });
+    saveStatus.textContent = "Kiosk restart requested.";
+  } catch (error) {
+    saveStatus.textContent = error.message || "Kiosk restart failed.";
+  }
+}
+
+async function rebootSystem() {
+  const confirmed = window.confirm("Restart the whole Raspberry Pi now?");
+  if (!confirmed) return;
+  saveStatus.textContent = "Restarting Raspberry Pi...";
+  try {
+    await postJson("/api/parent/system/reboot", { pin: adminState.pin });
+    saveStatus.textContent = "Raspberry Pi reboot requested. It will be offline briefly.";
+  } catch (error) {
+    saveStatus.textContent = error.message || "Raspberry Pi reboot failed.";
+  }
+}
+
+function renderSoftwareUpdateStatus(status) {
+  const state = document.querySelector("#software-update-state");
+  const path = document.querySelector("#software-update-path");
+  const log = document.querySelector("#software-update-log");
+  const button = document.querySelector("#update-system-software");
+  if (!state || !path || !log || !button) return;
+
+  button.disabled = Boolean(status.running);
+  path.textContent = status.log_path || "";
+  if (status.running) {
+    state.textContent = "Software update running...";
+  } else if (status.exists) {
+    state.textContent = "Software update idle. Last output below.";
+  } else {
+    state.textContent = "No update output yet.";
+  }
+
+  log.hidden = !status.log;
+  log.textContent = status.log || "";
+  if (status.log) {
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+function stopSoftwareUpdatePolling() {
+  if (!softwareUpdatePollTimer) return;
+  clearInterval(softwareUpdatePollTimer);
+  softwareUpdatePollTimer = null;
+}
+
+async function loadSoftwareUpdateStatus({ silent = false } = {}) {
+  if (!adminState.pin) return null;
+  try {
+    const status = await postJson("/api/parent/software/update/status", { pin: adminState.pin });
+    renderSoftwareUpdateStatus(status);
+    if (!status.running) {
+      stopSoftwareUpdatePolling();
+    }
+    return status;
+  } catch (error) {
+    if (!silent) {
+      saveStatus.textContent = error.message || "Software update status unavailable.";
+    }
+    return null;
+  }
+}
+
+function startSoftwareUpdatePolling() {
+  stopSoftwareUpdatePolling();
+  loadSoftwareUpdateStatus();
+  softwareUpdatePollTimer = setInterval(() => loadSoftwareUpdateStatus({ silent: true }), 4000);
+}
+
 async function updateSystemSoftware() {
   const button = document.querySelector("#update-system-software");
   const confirmed = window.confirm("Run Raspberry Pi software update now? This can take several minutes.");
@@ -436,9 +518,9 @@ async function updateSystemSoftware() {
   try {
     await postJson("/api/parent/software/update", { pin: adminState.pin });
     saveStatus.textContent = "Software update started. Keep the Pi powered on.";
+    startSoftwareUpdatePolling();
   } catch (error) {
     saveStatus.textContent = error.message || "Software update failed to start.";
-  } finally {
     button.disabled = false;
   }
 }
@@ -549,6 +631,8 @@ signOutButton.addEventListener("click", lockAdmin);
 document.querySelector("#save-config").addEventListener("click", saveConfig);
 document.querySelector("#exit-to-terminal").addEventListener("click", startTerminalMode);
 document.querySelector("#return-to-kiosk").addEventListener("click", returnToKiosk);
+document.querySelector("#restart-kiosk").addEventListener("click", restartKiosk);
+document.querySelector("#reboot-system").addEventListener("click", rebootSystem);
 document.querySelector("#update-system-software").addEventListener("click", updateSystemSoftware);
 document.querySelector("#apply-display-mode").addEventListener("click", applyDisplayMode);
 document.querySelector("#youtube-key-form").addEventListener("submit", saveYouTubeKey);

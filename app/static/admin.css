@@ -448,6 +448,47 @@ select {
   margin: 12px 0 8px;
 }
 
+.software-update-output {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.software-update-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #c2d2cb;
+  font-size: 13px;
+}
+
+.software-update-header strong {
+  color: #f3c85b;
+}
+
+.software-update-header span {
+  overflow-wrap: anywhere;
+  color: #9fb7ad;
+}
+
+.log-output {
+  max-height: 300px;
+  overflow: auto;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 6px;
+  background: #0a0f0d;
+  color: #dce9e3;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.log-output[hidden] {
+  display: none;
+}
+
 .save-bar {
   position: sticky;
   bottom: 0;

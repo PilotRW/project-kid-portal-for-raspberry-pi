@@ -1,2 +1,4 @@
 pi ALL=(root) NOPASSWD: /usr/local/sbin/kid-portal-kiosk-control terminal
 pi ALL=(root) NOPASSWD: /usr/local/sbin/kid-portal-kiosk-control kiosk
+pi ALL=(root) NOPASSWD: /usr/local/sbin/kid-portal-kiosk-control restart-kiosk
+pi ALL=(root) NOPASSWD: /usr/local/sbin/kid-portal-kiosk-control reboot

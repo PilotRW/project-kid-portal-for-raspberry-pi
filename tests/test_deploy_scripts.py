@@ -10,10 +10,13 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_kiosk_control_sudoers_is_installed():
     installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+    sudoers = (REPO_ROOT / "deploy/sudoers/kid-portal-kiosk-control").read_text(encoding="utf-8")
 
     assert "kid-portal-kiosk-control.sh /usr/local/sbin/kid-portal-kiosk-control" in installer
     assert "deploy/sudoers/kid-portal-kiosk-control" in installer
     assert "visudo -cf /etc/sudoers.d/kid-portal-kiosk-control" in installer
+    assert "/usr/local/sbin/kid-portal-kiosk-control restart-kiosk" in sudoers
+    assert "/usr/local/sbin/kid-portal-kiosk-control reboot" in sudoers
 
 
 def test_network_access_uses_deployed_lan_cidr_file():
@@ -37,6 +40,13 @@ def test_filter_insights_is_deployed():
 
     assert "filter-insights.json" in installer
     assert "KID_PORTAL_FILTER_INSIGHTS" in installer
+
+
+def test_software_update_log_is_readable_by_portal_user():
+    script = (REPO_ROOT / "deploy/scripts/kid-portal-software-update.sh").read_text(encoding="utf-8")
+
+    assert 'chown root:pi "$LOG_FILE"' in script
+    assert 'chmod 640 "$LOG_FILE"' in script
 
 
 def test_parent_pin_recovery_tool_is_installed_without_web_sudoers():
@@ -87,3 +97,17 @@ def test_keyboard_is_centered_against_kiosk_stage():
 
     assert "inset-inline: max(0px, calc((100vw - var(--stage-width)) / 2));" in styles
     assert "transform: none;" in styles
+
+
+def test_kiosk_disables_back_forward_cache_for_external_media():
+    unit = (REPO_ROOT / "deploy/systemd/kid-portal-kiosk.service").read_text(encoding="utf-8")
+
+    assert "--disable-features=Translate,DesktopPWAsTabStrip,BackForwardCache" in unit
+
+
+def test_keyboard_preview_masks_password_inputs():
+    script = (REPO_ROOT / "app/static/app.js").read_text(encoding="utf-8")
+
+    assert "function keyboardPreviewText(input)" in script
+    assert 'input.type === "password"' in script
+    assert 'return "•".repeat(input.value.length);' in script

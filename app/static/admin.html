@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kid Portal Admin</title>
-    <link rel="stylesheet" href="/static/admin.css?v=20260715-01" />
+    <link rel="stylesheet" href="/static/admin.css?v=20260904-01" />
   </head>
   <body>
     <main class="admin-shell">
@@ -372,6 +372,13 @@
               <button id="update-system-software" type="button">Update software</button>
             </div>
             <p class="empty">Runs apt-get update, full-upgrade, and autoremove in the background.</p>
+            <div class="software-update-output">
+              <div class="software-update-header">
+                <strong id="software-update-state">No update output yet.</strong>
+                <span id="software-update-path"></span>
+              </div>
+              <pre id="software-update-log" class="log-output" hidden></pre>
+            </div>
           </section>
 
           <section class="panel">
@@ -381,6 +388,8 @@
             <div class="toolbar-actions debug-actions">
               <button id="exit-to-terminal" type="button" class="danger">Exit to terminal</button>
               <button id="return-to-kiosk" type="button" class="secondary">Return to kiosk</button>
+              <button id="restart-kiosk" type="button" class="secondary">Restart kiosk</button>
+              <button id="reboot-system" type="button" class="danger">Restart Raspberry Pi</button>
             </div>
             <p class="empty">Terminal mode opens tty1 login on the Raspberry Pi display.</p>
           </section>
@@ -392,6 +401,6 @@
         </section>
       </section>
     </main>
-    <script src="/static/admin.js?v=20260822-02"></script>
+    <script src="/static/admin.js?v=20260904-01"></script>
   </body>
 </html>

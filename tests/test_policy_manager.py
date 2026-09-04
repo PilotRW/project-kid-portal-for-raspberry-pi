@@ -26,7 +26,35 @@ def test_policy_blocks_by_default_and_allows_configured_sites():
     assert "apis.google.com" in policy["URLAllowlist"]
     assert "www.gstatic.com" in policy["URLAllowlist"]
     assert "https://www.youtube-nocookie.com/*" in policy["URLAllowlist"]
+    assert "youtube.com" not in policy["URLAllowlist"]
+    assert ".youtube.com" not in policy["URLAllowlist"]
+    assert "www.youtube.com" not in policy["URLAllowlist"]
+    assert "https://www.youtube.com/*" not in policy["URLAllowlist"]
+    assert "https://www.youtube.com/iframe_api" in policy["URLAllowlist"]
+    assert "https://www.youtube.com/s/player/*" in policy["URLAllowlist"]
     assert policy["HomepageIsNewTabPage"] is False
     assert policy["HomepageLocation"] == "http://127.0.0.1:8080/"
     assert policy["RestoreOnStartupURLs"] == ["http://127.0.0.1:8080/"]
     assert policy["DownloadRestrictions"] == 3
+
+
+def test_policy_never_allows_direct_youtube_ui_from_config():
+    config = PortalConfig(
+        allowed_sites=[
+            SiteConfig(label="YouTube", url="https://www.youtube.com/", domain="youtube.com"),
+            SiteConfig(label="YouTube Mobile", url="https://m.youtube.com/", domain="m.youtube.com"),
+        ],
+        web_allowlist=["www.youtube.com", "music.youtube.com", "youtu.be"],
+        parent=ParentConfig(pin_sha256="x"),
+    )
+
+    allowlist = PolicyManager(config).build_policy()["URLAllowlist"]
+
+    assert "youtube.com" not in allowlist
+    assert "www.youtube.com" not in allowlist
+    assert "m.youtube.com" not in allowlist
+    assert "youtu.be" not in allowlist
+    assert "https://youtube.com/*" not in allowlist
+    assert "https://www.youtube.com/*" not in allowlist
+    assert "https://m.youtube.com/*" not in allowlist
+    assert "https://www.youtube.com/iframe_api" in allowlist

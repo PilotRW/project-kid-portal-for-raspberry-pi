@@ -46,6 +46,7 @@ THUMBNAIL_HOSTS = {"i.ytimg.com", "s.ytimg.com"}
 YOUTUBE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,32}$")
 NETWORK_ACCESS_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_REQUEST", "/run/kid-portal/network-access.request"))
 NETWORK_ACCESS_STATE_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_STATE", "/run/kid-portal/network-access.state"))
+SOFTWARE_UPDATE_LOG_PATH = Path(os.environ.get("KID_PORTAL_SOFTWARE_UPDATE_LOG", "/var/log/kid-portal-software-update.log"))
 ADMIN_PIN_MAX_ATTEMPTS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_MAX_ATTEMPTS", "8"))
 ADMIN_PIN_FINDTIME_SECONDS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_FINDTIME_SECONDS", "600"))
 ADMIN_PIN_LOCKOUT_SECONDS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_LOCKOUT_SECONDS", "600"))
@@ -114,6 +115,13 @@ class SystemActionResult(BaseModel):
     status: str
 
 
+class SoftwareUpdateStatus(BaseModel):
+    running: bool
+    log: str
+    log_path: str
+    exists: bool
+
+
 class NetworkAccessState(BaseModel):
     content_port: int = 8080
     content_lan_enabled: bool
@@ -150,7 +158,10 @@ ADMIN_SURFACE_ALLOWED_PATHS = {
     "/api/parent/monitoring",
     "/api/parent/terminal/start",
     "/api/parent/kiosk/start",
+    "/api/parent/kiosk/restart",
+    "/api/parent/system/reboot",
     "/api/parent/software/update",
+    "/api/parent/software/update/status",
 }
 ADMIN_SURFACE_ALLOWED_PREFIXES = ("/static/admin.",)
 
@@ -238,6 +249,36 @@ def get_config() -> PortalConfig:
 
 def run_software_update() -> None:
     subprocess.run(["sudo", "-n", "/usr/local/sbin/kid-portal-software-update"], check=True, timeout=7200)
+
+
+def is_software_update_running() -> bool:
+    try:
+        output = subprocess.check_output(["ps", "-eo", "args"], text=True, timeout=10)
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return False
+    return any("/usr/local/sbin/kid-portal-software-update" in line for line in output.splitlines())
+
+
+def read_software_update_status(max_bytes: int = 24000) -> SoftwareUpdateStatus:
+    exists = SOFTWARE_UPDATE_LOG_PATH.exists()
+    log = ""
+    if exists:
+        try:
+            with SOFTWARE_UPDATE_LOG_PATH.open("rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                size = handle.tell()
+                handle.seek(max(0, size - max_bytes))
+                log = handle.read().decode("utf-8", errors="replace")
+            if size > max_bytes:
+                log = "... earlier output omitted ...\n" + log
+        except OSError as error:
+            log = f"Unable to read software update log: {error}"
+    return SoftwareUpdateStatus(
+        running=is_software_update_running(),
+        log=log,
+        log_path=str(SOFTWARE_UPDATE_LOG_PATH),
+        exists=exists,
+    )
 
 
 def run_kiosk_control(action: str) -> None:
@@ -697,11 +738,31 @@ async def return_to_kiosk(request: ParentPinRequest, http_request: Request, back
     return SystemActionResult(status="kiosk_starting")
 
 
+@app.post("/api/parent/kiosk/restart")
+async def restart_kiosk(request: ParentPinRequest, http_request: Request, background_tasks: BackgroundTasks) -> SystemActionResult:
+    verify_parent_pin(request.pin, http_request)
+    background_tasks.add_task(run_kiosk_control, "restart-kiosk")
+    return SystemActionResult(status="kiosk_restarting")
+
+
+@app.post("/api/parent/system/reboot")
+async def reboot_system(request: ParentPinRequest, http_request: Request, background_tasks: BackgroundTasks) -> SystemActionResult:
+    verify_parent_pin(request.pin, http_request)
+    background_tasks.add_task(run_kiosk_control, "reboot")
+    return SystemActionResult(status="system_rebooting")
+
+
 @app.post("/api/parent/software/update")
 async def update_system_software(request: ParentPinRequest, http_request: Request, background_tasks: BackgroundTasks) -> SystemActionResult:
     verify_parent_pin(request.pin, http_request)
     background_tasks.add_task(run_software_update)
     return SystemActionResult(status="software_update_started")
+
+
+@app.post("/api/parent/software/update/status")
+async def read_software_update(request: ParentPinRequest, http_request: Request) -> SoftwareUpdateStatus:
+    verify_parent_pin(request.pin, http_request)
+    return read_software_update_status()
 
 
 @app.get("/youtube/watch/{video_id}", response_class=HTMLResponse)

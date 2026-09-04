@@ -16,8 +16,16 @@ case "${1:-}" in
     systemctl start kid-portal-x.service
     systemctl start kid-portal-kiosk.service
     ;;
+  restart-kiosk)
+    systemctl reset-failed kid-portal-x.service kid-portal-kiosk.service
+    systemctl restart kid-portal-x.service
+    systemctl restart kid-portal-kiosk.service
+    ;;
+  reboot)
+    systemctl reboot
+    ;;
   *)
-    echo "Usage: kid-portal-kiosk-control terminal|kiosk" >&2
+    echo "Usage: kid-portal-kiosk-control terminal|kiosk|restart-kiosk|reboot" >&2
     exit 2
     ;;
 esac

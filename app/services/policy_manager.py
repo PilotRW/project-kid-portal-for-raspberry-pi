@@ -12,7 +12,15 @@ LOCAL_KIOSK_ALLOWLIST = [
     "http://[::1]:8080/*",
 ]
 
-YOUTUBE_ALLOWLIST = [
+YOUTUBE_RESERVED_DOMAINS = {
+    "youtube.com",
+    "www.youtube.com",
+    "m.youtube.com",
+    "music.youtube.com",
+    "youtu.be",
+}
+
+YOUTUBE_PLAYER_ALLOWLIST = [
     "googlevideo.com",
     ".googlevideo.com",
     "apis.google.com",
@@ -21,10 +29,6 @@ YOUTUBE_ALLOWLIST = [
     "i.ytimg.com",
     "s.ytimg.com",
     "www.gstatic.com",
-    "www.youtube.com",
-    "m.youtube.com",
-    "youtube.com",
-    ".youtube.com",
     "www.youtube-nocookie.com",
     "youtube-nocookie.com",
     ".youtube-nocookie.com",
@@ -36,9 +40,8 @@ YOUTUBE_ALLOWLIST = [
     "https://youtube-nocookie.com/*",
     "https://www.youtube-nocookie.com/*",
     "https://*.youtube-nocookie.com/*",
-    "https://youtube.com/*",
-    "https://www.youtube.com/*",
-    "https://m.youtube.com/*",
+    "https://www.youtube.com/iframe_api",
+    "https://www.youtube.com/s/player/*",
     "https://www.gstatic.com/youtube/*",
     "https://apis.google.com/*",
     "https://*.googlevideo.com/*",
@@ -52,10 +55,12 @@ class PolicyManager:
     def build_policy(self) -> dict[str, object]:
         allowlist = [*LOCAL_KIOSK_ALLOWLIST]
         for site in self.config.allowed_sites:
-            allowlist.extend(self._domain_patterns(site.domain))
+            if not self._is_reserved_youtube_domain(site.domain):
+                allowlist.extend(self._domain_patterns(site.domain))
         for domain in self.config.web_allowlist:
-            allowlist.extend(self._domain_patterns(domain))
-        allowlist.extend(YOUTUBE_ALLOWLIST)
+            if not self._is_reserved_youtube_domain(domain):
+                allowlist.extend(self._domain_patterns(domain))
+        allowlist.extend(YOUTUBE_PLAYER_ALLOWLIST)
 
         return {
             "URLBlocklist": ["http://*", "http://*/*", "https://*", "https://*/*"],
@@ -86,3 +91,9 @@ class PolicyManager:
             f"https://www.{normalized}/*",
             f"https://*.{normalized}/*",
         ]
+
+    @staticmethod
+    def _is_reserved_youtube_domain(domain: str) -> bool:
+        normalized = domain.strip().lower().removeprefix("https://").removeprefix("http://").rstrip("/")
+        normalized = normalized.split("/", 1)[0].removeprefix("www.")
+        return normalized in YOUTUBE_RESERVED_DOMAINS or normalized.endswith(".youtube.com")

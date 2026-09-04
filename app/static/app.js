@@ -699,6 +699,32 @@ async function startKioskMode() {
   status.textContent = response.ok ? "Kiosk starting." : "Kiosk start failed.";
 }
 
+async function restartKioskMode() {
+  const status = document.querySelector("#settings-status");
+  const confirmed = window.confirm("Restart the kiosk browser?");
+  if (!confirmed) return;
+  status.textContent = "Restarting kiosk...";
+  const response = await fetch("/api/parent/kiosk/restart", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin: state.parentPin }),
+  });
+  status.textContent = response.ok ? "Kiosk restart requested." : "Kiosk restart failed.";
+}
+
+async function rebootSystem() {
+  const status = document.querySelector("#settings-status");
+  const confirmed = window.confirm("Restart the whole Raspberry Pi now?");
+  if (!confirmed) return;
+  status.textContent = "Restarting Raspberry Pi...";
+  const response = await fetch("/api/parent/system/reboot", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin: state.parentPin }),
+  });
+  status.textContent = response.ok ? "Raspberry Pi reboot requested." : "Raspberry Pi reboot failed.";
+}
+
 function formatBytes(bytes) {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = Number(bytes) || 0;
@@ -842,7 +868,7 @@ function renderKeyboard() {
   const keys = document.querySelector("#keyboard-keys");
   const preview = document.querySelector("#keyboard-preview");
   const input = state.activeInput;
-  preview.textContent = input ? input.value || input.placeholder : "";
+  preview.textContent = keyboardPreviewText(input);
   keys.innerHTML = "";
   const layout = state.keyboardMode === "text"
     ? keyboardLayouts.text[state.keyboardLanguage]
@@ -876,6 +902,14 @@ function renderKeyboard() {
     });
     keys.appendChild(rowNode);
   });
+}
+
+function keyboardPreviewText(input) {
+  if (!input) return "";
+  if (input.type === "password" && input.value) {
+    return "•".repeat(input.value.length);
+  }
+  return input.value || input.placeholder || "";
 }
 
 function pressKeyboardKey(key) {
@@ -1026,6 +1060,8 @@ document.querySelector("#refresh-monitoring").addEventListener("click", loadPare
 document.querySelector("#clear-parent-history").addEventListener("click", clearParentHistory);
 document.querySelector("#exit-to-terminal").addEventListener("click", startTerminalMode);
 document.querySelector("#return-to-kiosk").addEventListener("click", startKioskMode);
+document.querySelector("#restart-kiosk").addEventListener("click", restartKioskMode);
+document.querySelector("#reboot-system").addEventListener("click", rebootSystem);
 document.querySelector("#pin-form").addEventListener("submit", unlockSettings);
 document.querySelector("#save-config").addEventListener("click", saveParentConfig);
 document.querySelector("#site-form").addEventListener("submit", (event) => {
