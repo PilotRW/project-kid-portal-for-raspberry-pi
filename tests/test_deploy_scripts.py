@@ -149,3 +149,13 @@ def test_kiosk_uses_spatial_arrow_navigation():
     assert "function moveFocusDirection(direction)" in script
     assert "function directionalScore(direction, current, candidate)" in script
     assert "moveFocusDirection(event.key.replace(\"Arrow\", \"\").toLowerCase())" in script
+
+
+def test_kiosk_scrolls_to_focused_remote_target():
+    script = (REPO_ROOT / "app/static/app.js").read_text(encoding="utf-8")
+
+    assert "function ensureFocusVisible(target)" in script
+    assert 'const shell = document.querySelector(".shell");' in script
+    assert 'target.focus({ preventScroll: true });' in script
+    assert "ensureFocusVisible(target);" in script
+    assert "shell.scrollBy" in script

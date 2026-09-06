@@ -90,6 +90,25 @@ function setFocus(index) {
   state.focusedIndex = index;
   target.classList.add("focus");
   target.focus({ preventScroll: true });
+  ensureFocusVisible(target);
+}
+
+function ensureFocusVisible(target) {
+  const shell = document.querySelector(".shell");
+  if (!shell) return;
+  const margin = 18;
+  const targetRect = target.getBoundingClientRect();
+  const shellRect = shell.getBoundingClientRect();
+  const keyboard = document.querySelector("#keyboard");
+  const keyboardRect = keyboard && !keyboard.hidden ? keyboard.getBoundingClientRect() : null;
+  const visibleTop = shellRect.top + margin;
+  const visibleBottom = Math.min(shellRect.bottom, keyboardRect ? keyboardRect.top : shellRect.bottom) - margin;
+
+  if (targetRect.top < visibleTop) {
+    shell.scrollBy({ top: targetRect.top - visibleTop, behavior: "auto" });
+  } else if (targetRect.bottom > visibleBottom) {
+    shell.scrollBy({ top: targetRect.bottom - visibleBottom, behavior: "auto" });
+  }
 }
 
 function moveFocus(delta) {
