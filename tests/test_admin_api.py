@@ -70,6 +70,16 @@ def test_admin_page_loads():
     assert "/static/admin.js" in response.text
 
 
+def test_remote_page_loads():
+    client = TestClient(app)
+
+    response = client.get("/remote")
+
+    assert response.status_code == 200
+    assert "Kid Portal Remote" in response.text
+    assert "/static/remote.js" in response.text
+
+
 def test_admin_state_rejects_invalid_pin():
     client = TestClient(app)
 
@@ -303,6 +313,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "data-rule-count=\"blocked_keywords\"" in response.text
     assert "admin.css?v=20260904-01" in response.text
     assert "admin.js?v=20260904-01" in response.text
+    assert 'href="/remote"' in response.text
 
 
 def test_admin_surface_uses_admin_as_default(monkeypatch):
@@ -323,6 +334,65 @@ def test_admin_surface_blocks_content_routes(monkeypatch):
     response = client.get("/youtube/watch/video-123")
 
     assert response.status_code == 404
+
+
+def test_admin_surface_allows_remote(monkeypatch):
+    monkeypatch.setenv("KID_PORTAL_SURFACE", "admin")
+    client = TestClient(app)
+
+    response = client.get("/remote")
+
+    assert response.status_code == 200
+    assert "Kid Portal Remote" in response.text
+
+
+def test_remote_key_requires_valid_pin(monkeypatch):
+    pressed = []
+
+    class FakeRemoteControl:
+        def press_key(self, key):
+            pressed.append(key)
+
+    monkeypatch.setattr(main_module, "remote_control_service", FakeRemoteControl())
+    client = TestClient(app)
+
+    rejected = client.post("/api/remote/key", json={"pin": "0000", "key": "up"})
+    accepted = client.post("/api/remote/key", json={"pin": "1234", "key": "up"})
+
+    assert rejected.status_code == 403
+    assert accepted.status_code == 200
+    assert pressed == ["up"]
+
+
+def test_remote_key_rejects_unsupported_key(monkeypatch):
+    class FakeRemoteControl:
+        def press_key(self, key):
+            raise ValueError("Unsupported remote key")
+
+    monkeypatch.setattr(main_module, "remote_control_service", FakeRemoteControl())
+    client = TestClient(app)
+
+    response = client.post("/api/remote/key", json={"pin": "1234", "key": "ctrl_l"})
+
+    assert response.status_code == 400
+
+
+def test_remote_text_requires_valid_pin(monkeypatch):
+    typed = []
+
+    class FakeRemoteControl:
+        def type_text(self, text):
+            typed.append(text)
+
+    monkeypatch.setattr(main_module, "remote_control_service", FakeRemoteControl())
+    client = TestClient(app)
+
+    rejected = client.post("/api/remote/type", json={"pin": "0000", "text": "bluey"})
+    accepted = client.post("/api/remote/type", json={"pin": "1234", "text": "bluey"})
+
+    assert rejected.status_code == 403
+    assert accepted.status_code == 200
+    assert typed == ["bluey"]
 
 
 def test_network_access_update_requires_valid_pin():

@@ -19,6 +19,12 @@ def test_kiosk_control_sudoers_is_installed():
     assert "/usr/local/sbin/kid-portal-kiosk-control reboot" in sudoers
 
 
+def test_remote_control_dependency_is_installed():
+    installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+
+    assert "xdotool" in installer
+
+
 def test_network_access_uses_deployed_lan_cidr_file():
     installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
     script = (REPO_ROOT / "deploy/scripts/kid-portal-network-access.sh").read_text(encoding="utf-8")

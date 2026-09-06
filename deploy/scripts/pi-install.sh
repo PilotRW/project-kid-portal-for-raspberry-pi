@@ -53,6 +53,7 @@ if [[ "$SKIP_APT" != "1" ]]; then
     rsync \
     ufw \
     unclutter \
+    xdotool \
     xinit \
     xserver-xorg
 fi

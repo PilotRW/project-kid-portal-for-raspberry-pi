@@ -20,6 +20,7 @@ from app.services.filter_insights import FilterInsightsService
 from app.services.filtering_engine import Decision, EvaluatedVideo, FilteringEngine, VideoCandidate
 from app.services.network_info import NetworkInfoService
 from app.services.policy_manager import PolicyManager
+from app.services.remote_control import RemoteControlService
 from app.services.search_history import SearchHistoryService
 from app.services.usage_tracker import UsageTrackerService
 from app.services.wifi_manager import WifiConnectResult, WifiManager, WifiNetwork, WifiStatus
@@ -42,6 +43,7 @@ usage_tracker_service = UsageTrackerService()
 wifi_manager = WifiManager()
 display_manager = DisplayManager()
 youtube_key_manager = YouTubeKeyManager()
+remote_control_service = RemoteControlService()
 THUMBNAIL_HOSTS = {"i.ytimg.com", "s.ytimg.com"}
 YOUTUBE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,32}$")
 NETWORK_ACCESS_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_REQUEST", "/run/kid-portal/network-access.request"))
@@ -146,11 +148,22 @@ class WifiConnectRequest(ParentPinRequest):
     password: str | None = None
 
 
+class RemoteKeyRequest(ParentPinRequest):
+    key: str
+
+
+class RemoteTextRequest(ParentPinRequest):
+    text: str
+
+
 ADMIN_SURFACE_ALLOWED_PATHS = {
     "/",
     "/admin",
+    "/remote",
     "/api/admin/state",
     "/api/admin/youtube/history/clear",
+    "/api/remote/key",
+    "/api/remote/type",
     "/api/parent/youtube/key",
     "/api/parent/config",
     "/api/parent/network-access",
@@ -164,7 +177,7 @@ ADMIN_SURFACE_ALLOWED_PATHS = {
     "/api/parent/software/update",
     "/api/parent/software/update/status",
 }
-ADMIN_SURFACE_ALLOWED_PREFIXES = ("/static/admin.",)
+ADMIN_SURFACE_ALLOWED_PREFIXES = ("/static/admin.", "/static/remote.")
 
 
 def is_admin_surface() -> bool:
@@ -437,6 +450,11 @@ async def admin() -> str:
     return (STATIC_DIR / "admin.html").read_text(encoding="utf-8")
 
 
+@app.get("/remote", response_class=HTMLResponse)
+async def remote() -> str:
+    return (STATIC_DIR / "remote.html").read_text(encoding="utf-8")
+
+
 @app.get("/api/config")
 async def read_config() -> PortalConfig:
     return get_config()
@@ -637,6 +655,30 @@ async def clear_admin_youtube_history(request: ParentPinRequest, http_request: R
     verify_parent_pin(request.pin, http_request)
     search_history_service.clear()
     return {"status": "cleared"}
+
+
+@app.post("/api/remote/key")
+async def send_remote_key(request: RemoteKeyRequest, http_request: Request) -> dict[str, str]:
+    verify_parent_pin(request.pin, http_request)
+    try:
+        remote_control_service.press_key(request.key)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return {"status": "sent"}
+
+
+@app.post("/api/remote/type")
+async def send_remote_text(request: RemoteTextRequest, http_request: Request) -> dict[str, str]:
+    verify_parent_pin(request.pin, http_request)
+    try:
+        remote_control_service.type_text(request.text)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return {"status": "sent"}
 
 
 @app.put("/api/parent/youtube/key")
