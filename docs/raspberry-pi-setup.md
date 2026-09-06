@@ -18,7 +18,7 @@ See [Deploy Automation](./deploy-automation.md).
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv python3-pip chromium-browser xserver-xorg xinit openbox unclutter keyd rsync network-manager fail2ban ufw
+sudo apt install -y python3-venv python3-pip chromium-browser xserver-xorg xinit openbox unclutter xdotool keyd rsync network-manager fail2ban ufw
 ```
 
 ## 2. Install Application
@@ -92,11 +92,21 @@ sudo cp deploy/scripts/kid-portal-wifi.sh /usr/local/sbin/kid-portal-wifi
 sudo chmod 755 /usr/local/sbin/kid-portal-wifi
 sudo cp deploy/scripts/kid-portal-youtube-key.sh /usr/local/sbin/kid-portal-youtube-key
 sudo chmod 755 /usr/local/sbin/kid-portal-youtube-key
+sudo cp deploy/scripts/kid-portal-software-update.sh /usr/local/sbin/kid-portal-software-update
+sudo chmod 755 /usr/local/sbin/kid-portal-software-update
+sudo cp deploy/scripts/kid-portal-kiosk-control.sh /usr/local/sbin/kid-portal-kiosk-control
+sudo chmod 755 /usr/local/sbin/kid-portal-kiosk-control
+sudo cp deploy/scripts/kid-portal-reset-parent-pin.py /usr/local/sbin/kid-portal-reset-parent-pin
+sudo chmod 755 /usr/local/sbin/kid-portal-reset-parent-pin
 sudo mkdir -p /etc/sudoers.d
 sudo cp deploy/sudoers/kid-portal-wifi /etc/sudoers.d/kid-portal-wifi
 sudo cp deploy/sudoers/kid-portal-youtube-key /etc/sudoers.d/kid-portal-youtube-key
+sudo cp deploy/sudoers/kid-portal-software-update /etc/sudoers.d/kid-portal-software-update
+sudo cp deploy/sudoers/kid-portal-kiosk-control /etc/sudoers.d/kid-portal-kiosk-control
 sudo chmod 440 /etc/sudoers.d/kid-portal-wifi
 sudo chmod 440 /etc/sudoers.d/kid-portal-youtube-key
+sudo chmod 440 /etc/sudoers.d/kid-portal-software-update
+sudo chmod 440 /etc/sudoers.d/kid-portal-kiosk-control
 sudo mkdir -p /etc/X11/xorg.conf.d
 sudo cp deploy/xorg/99-kid-portal.conf /etc/X11/xorg.conf.d/99-kid-portal.conf
 sudo systemctl daemon-reload
@@ -104,7 +114,7 @@ sudo cp deploy/security/fail2ban-sshd.local /etc/fail2ban/jail.d/kid-portal-sshd
 sudo mkdir -p /etc/ssh/sshd_config.d
 sudo cp deploy/security/sshd-hardening.conf /etc/ssh/sshd_config.d/99-kid-portal-hardening.conf
 sudo sshd -t
-sudo systemctl enable fail2ban keyd ssh kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-x.service kid-portal-kiosk.service
+sudo systemctl enable fail2ban keyd ssh kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-x.service kid-portal-kiosk.service
 sudo ufw allow from 192.168.0.0/24 to any port 80 proto tcp
 sudo ufw allow from 192.168.0.0/24 to any port 22 proto tcp
 sudo ufw delete allow from 192.168.0.0/24 to any port 8080 proto tcp

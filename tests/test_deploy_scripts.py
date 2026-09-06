@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -23,6 +24,56 @@ def test_remote_control_dependency_is_installed():
     installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
 
     assert "xdotool" in installer
+
+
+def test_tailscale_bootstrap_is_opt_in_and_interface_scoped():
+    installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+    bootstrap = (REPO_ROOT / "deploy/bootstrap-pi.sh").read_text(encoding="utf-8")
+    deploy = (REPO_ROOT / "deploy/deploy-to-pi.sh").read_text(encoding="utf-8")
+
+    assert 'ENABLE_TAILSCALE="${KID_PORTAL_ENABLE_TAILSCALE:-0}"' in installer
+    assert "https://tailscale.com/install.sh" in installer
+    assert '--auth-key "$TAILSCALE_AUTHKEY"' in installer
+    assert "--accept-dns=false" in installer
+    assert 'ufw allow in on tailscale0 from "$MANAGEMENT_CIDR" to any port 22 proto tcp' in installer
+    assert 'ufw allow in on tailscale0 from "$MANAGEMENT_CIDR" to any port 80 proto tcp' in installer
+    assert 'ALLOW_LAN_SSH="${KID_PORTAL_ALLOW_LAN_SSH:-1}"' in installer
+    assert "KID_PORTAL_ENABLE_TAILSCALE" in bootstrap
+    assert "KID_PORTAL_ENABLE_TAILSCALE" in deploy
+
+
+def test_fleet_inventory_template_keeps_auth_keys_out_of_git():
+    gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
+    example = (REPO_ROOT / "deploy/devices.example.json").read_text(encoding="utf-8")
+    data = json.loads(example)
+
+    assert ".local/" in gitignore
+    assert "tailscale_authkey_env" in example
+    assert "tskey-" not in example
+    assert data["defaults"]["enable_tailscale"] is True
+    assert data["defaults"]["allow_lan_ssh"] is True
+
+
+def test_fleet_runner_lists_example_inventory():
+    env = os.environ.copy()
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "deploy/fleet.py"),
+            "list",
+            "--inventory",
+            str(REPO_ROOT / "deploy/devices.example.json"),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+        env=env,
+    )
+
+    assert result.returncode == 0
+    assert "home" in result.stdout
+    assert "family-1" in result.stdout
+    assert "tailscale=1" in result.stdout
 
 
 def test_network_access_uses_deployed_lan_cidr_file():

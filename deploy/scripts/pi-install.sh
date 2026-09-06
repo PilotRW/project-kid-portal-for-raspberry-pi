@@ -5,8 +5,14 @@ SOURCE_DIR="${1:-$(pwd)}"
 APP_DIR="${KID_PORTAL_APP_DIR:-/opt/kid-portal}"
 CONFIG_DIR="${KID_PORTAL_CONFIG_DIR:-/etc/kid-portal}"
 LAN_CIDR="${KID_PORTAL_LAN_CIDR:-192.168.0.0/24}"
+MANAGEMENT_CIDR="${KID_PORTAL_MANAGEMENT_CIDR:-100.64.0.0/10}"
+ALLOW_LAN_SSH="${KID_PORTAL_ALLOW_LAN_SSH:-1}"
 PI_USER="${KID_PORTAL_USER:-pi}"
 SKIP_APT="${KID_PORTAL_SKIP_APT:-0}"
+ENABLE_TAILSCALE="${KID_PORTAL_ENABLE_TAILSCALE:-0}"
+TAILSCALE_AUTHKEY="${KID_PORTAL_TAILSCALE_AUTHKEY:-}"
+TAILSCALE_HOSTNAME="${KID_PORTAL_TAILSCALE_HOSTNAME:-$(hostname)}"
+TAILSCALE_TAGS="${KID_PORTAL_TAILSCALE_TAGS:-}"
 
 write_chromium_policy() {
   local tmp_file
@@ -23,6 +29,30 @@ write_chromium_policy() {
   rm -f "$tmp_file"
   echo "Kid Portal API did not return a valid Chromium policy." >&2
   return 1
+}
+
+configure_tailscale() {
+  if [[ "$ENABLE_TAILSCALE" != "1" ]]; then
+    return 0
+  fi
+
+  if ! command -v tailscale >/dev/null 2>&1; then
+    curl -fsSL https://tailscale.com/install.sh | sh
+  fi
+
+  systemctl enable --now tailscaled
+
+  if [[ -z "$TAILSCALE_AUTHKEY" ]]; then
+    echo "Tailscale installed. Run 'sudo tailscale up --hostname $TAILSCALE_HOSTNAME --accept-dns=false' on the Pi or provide KID_PORTAL_TAILSCALE_AUTHKEY." >&2
+    return 0
+  fi
+
+  local up_args
+  up_args=(up --auth-key "$TAILSCALE_AUTHKEY" --hostname "$TAILSCALE_HOSTNAME" --accept-dns=false)
+  if [[ -n "$TAILSCALE_TAGS" ]]; then
+    up_args+=(--advertise-tags "$TAILSCALE_TAGS")
+  fi
+  tailscale "${up_args[@]}"
 }
 
 if [[ "$(id -u)" -ne 0 ]]; then
@@ -146,9 +176,18 @@ sshd -t
 systemctl daemon-reload
 systemctl enable fail2ban keyd ssh
 systemctl enable kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-x.service kid-portal-kiosk.service
+configure_tailscale
 
-ufw allow from "$LAN_CIDR" to any port 22 proto tcp
+if [[ "$ALLOW_LAN_SSH" == "1" ]]; then
+  ufw allow from "$LAN_CIDR" to any port 22 proto tcp
+else
+  ufw delete allow from "$LAN_CIDR" to any port 22 proto tcp >/dev/null 2>&1 || true
+fi
 ufw allow from "$LAN_CIDR" to any port 80 proto tcp
+if [[ "$ENABLE_TAILSCALE" == "1" ]]; then
+  ufw allow in on tailscale0 from "$MANAGEMENT_CIDR" to any port 22 proto tcp
+  ufw allow in on tailscale0 from "$MANAGEMENT_CIDR" to any port 80 proto tcp
+fi
 ufw delete allow 8080/tcp >/dev/null 2>&1 || true
 ufw delete allow from "$LAN_CIDR" to any port 8080 proto tcp >/dev/null 2>&1 || true
 ufw --force enable

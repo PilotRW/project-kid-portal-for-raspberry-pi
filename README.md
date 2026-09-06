@@ -107,6 +107,16 @@ For repeatable installs and updates, use [docs/deploy-automation.md](/Users/pilo
 ./deploy/check-pi.sh 192.168.0.142 pi
 ```
 
+For multiple family devices, keep the real fleet inventory in ignored `.local/devices.json` and use:
+
+```bash
+./deploy/fleet-list.sh
+./deploy/fleet-check.sh all
+./deploy/fleet-deploy.sh all
+```
+
+Tailscale management is opt-in through `KID_PORTAL_ENABLE_TAILSCALE=1`. It is used for SSH/admin deploy and monitoring; it does not expose the child-facing content port `8080`.
+
 Security posture and production checks are tracked in [docs/security.md](/Users/pilotrw/GITHUB/project-kid-portal-for-raspberry-pi/docs/security.md).
 
 The deployment design targets Raspberry Pi OS Lite 64-bit on Raspberry Pi 5 first, with Raspberry Pi 4 compatibility intended. Raspberry Pi Zero 2 W is architecture-compatible only in the sense that the same services/scripts do not depend on Pi 5-specific APIs; it is not a validated or recommended performance target for the full kiosk.

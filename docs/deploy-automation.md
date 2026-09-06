@@ -27,6 +27,65 @@ For a different LAN subnet:
 KID_PORTAL_LAN_CIDR=192.168.1.0/24 ./deploy/bootstrap-pi.sh 192.168.1.50 pi
 ```
 
+## Tailscale Management Network
+
+Kid Portal can join a private Tailscale tailnet during bootstrap. This is opt-in and intended for SSH, health checks, deploys, monitoring, and remote parent admin access. It does not expose the child-facing content service on port `8080`.
+
+Use a one-off or tagged pre-auth key from Tailscale and pass it through the environment. Do not commit auth keys into this repo.
+
+```bash
+export KID_PORTAL_ENABLE_TAILSCALE=1
+export KID_PORTAL_TAILSCALE_AUTHKEY=tskey-auth-...
+export KID_PORTAL_TAILSCALE_HOSTNAME=kid-portal-home
+export KID_PORTAL_TAILSCALE_TAGS=tag:kid-portal
+./deploy/bootstrap-pi.sh 192.168.0.142 pi
+```
+
+Defaults:
+
+- LAN SSH remains open: `KID_PORTAL_ALLOW_LAN_SSH=1`.
+- Tailscale management CIDR is `100.64.0.0/10`.
+- UFW allows ports `22` and `80` from Tailscale only on interface `tailscale0`.
+- Admin stays on port `80`.
+- Content port `8080` remains closed to LAN/Tailscale unless the parent explicitly enables the existing 8080 exposure switch.
+
+After the device appears in Tailscale, update and check it through its MagicDNS name or Tailscale IP:
+
+```bash
+./deploy/deploy-to-pi.sh kid-portal-home.your-tailnet.ts.net pi
+./deploy/check-pi.sh kid-portal-home.your-tailnet.ts.net pi
+```
+
+If you want to close LAN SSH later, first verify Tailscale SSH works, then run deploy with:
+
+```bash
+KID_PORTAL_ENABLE_TAILSCALE=1 KID_PORTAL_ALLOW_LAN_SSH=0 ./deploy/deploy-to-pi.sh kid-portal-home.your-tailnet.ts.net pi
+```
+
+## Fleet Inventory
+
+For multiple family devices, keep real inventory and auth-key environment variable names in `.local/devices.json`; `.local/` is ignored by git.
+
+Start from the example:
+
+```bash
+mkdir -p .local
+cp deploy/devices.example.json .local/devices.json
+```
+
+Then edit `.local/devices.json` for real hosts and Tailscale names. The inventory should reference auth keys by environment variable name, not store auth-key values.
+
+Fleet commands:
+
+```bash
+./deploy/fleet-list.sh
+./deploy/fleet-bootstrap.sh home
+./deploy/fleet-check.sh all
+./deploy/fleet-deploy.sh all
+```
+
+For `bootstrap`, the fleet runner uses the device `host` field, usually the temporary LAN IP from Raspberry Pi Imager. For `deploy` and `check`, it prefers `management_host`, usually the Tailscale MagicDNS name or Tailscale IP.
+
 ## Update Existing Device
 
 ```bash
