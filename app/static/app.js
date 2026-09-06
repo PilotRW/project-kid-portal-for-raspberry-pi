@@ -412,6 +412,7 @@ function renderFilterSettings() {
   document.querySelector("#default-decision").value = state.editableConfig.filtering.default_decision || "REQUIRE_PARENT_APPROVAL";
   document.querySelector("#parent-pin").value = "";
   document.querySelector("#view-pin").value = "";
+  document.querySelector("#remote-pin").value = "";
 }
 
 function syncFilterSettings() {
@@ -793,6 +794,7 @@ async function saveParentConfig() {
   syncFilterSettings();
   const parentPin = document.querySelector("#parent-pin").value.trim();
   const viewPin = document.querySelector("#view-pin").value.trim();
+  const remotePin = document.querySelector("#remote-pin").value.trim();
   if (parentPin && !/^\d{4,12}$/.test(parentPin)) {
     status.textContent = "Parent PIN must be 4-12 digits.";
     return;
@@ -801,8 +803,20 @@ async function saveParentConfig() {
     status.textContent = "Viewing PIN must be 4-12 digits.";
     return;
   }
+  if (remotePin && !/^\d{4,12}$/.test(remotePin)) {
+    status.textContent = "Remote PIN must be 4-12 digits.";
+    return;
+  }
   if (parentPin && viewPin && parentPin === viewPin) {
     status.textContent = "Parent PIN and viewing PIN must be different.";
+    return;
+  }
+  if (parentPin && remotePin && parentPin === remotePin) {
+    status.textContent = "Parent PIN and remote PIN must be different.";
+    return;
+  }
+  if (viewPin && remotePin && viewPin === remotePin) {
+    status.textContent = "Viewing PIN and remote PIN must be different.";
     return;
   }
   status.textContent = "Saving rules...";
@@ -814,6 +828,7 @@ async function saveParentConfig() {
       config: state.editableConfig,
       parent_pin: parentPin || null,
       view_pin: viewPin || null,
+      remote_pin: remotePin || null,
     }),
   });
   status.textContent = response.ok ? "Rules saved." : "Save failed.";
@@ -823,6 +838,7 @@ async function saveParentConfig() {
     }
     document.querySelector("#parent-pin").value = "";
     document.querySelector("#view-pin").value = "";
+    document.querySelector("#remote-pin").value = "";
     loadTiles();
   }
 }

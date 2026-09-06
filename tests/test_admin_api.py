@@ -143,6 +143,24 @@ def test_parent_config_can_change_parent_pin(monkeypatch, tmp_path):
     assert not saved_config.parent.verify_pin("1234")
 
 
+def test_parent_config_can_change_remote_pin(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.json"
+    original_config = main_module.config_service.load()
+    config_path.write_text(original_config.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr(main_module.config_service, "config_path", config_path)
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/parent/config",
+        json={"pin": "1234", "config": original_config.model_dump(mode="json"), "remote_pin": "2468"},
+    )
+
+    assert response.status_code == 200
+    saved_config = main_module.config_service.load()
+    assert saved_config.parent.verify_remote_pin("2468")
+    assert not saved_config.parent.verify_remote_pin("2580")
+
+
 def test_parent_config_rejects_matching_parent_and_viewing_pins(monkeypatch, tmp_path):
     config_path = tmp_path / "config.json"
     original_config = main_module.config_service.load()
@@ -164,6 +182,26 @@ def test_parent_config_rejects_matching_parent_and_viewing_pins(monkeypatch, tmp
     assert "different" in response.json()["detail"]
 
 
+def test_parent_config_rejects_matching_remote_pin(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.json"
+    original_config = main_module.config_service.load()
+    config_path.write_text(original_config.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr(main_module.config_service, "config_path", config_path)
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/parent/config",
+        json={
+            "pin": "1234",
+            "config": original_config.model_dump(mode="json"),
+            "remote_pin": "4321",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Remote PIN" in response.json()["detail"]
+
+
 def test_parent_config_ignores_direct_pin_hash_overwrite(monkeypatch, tmp_path):
     config_path = tmp_path / "config.json"
     original_config = main_module.config_service.load()
@@ -172,6 +210,7 @@ def test_parent_config_ignores_direct_pin_hash_overwrite(monkeypatch, tmp_path):
     payload_config = original_config.model_copy(deep=True)
     payload_config.parent.set_pin("9999")
     payload_config.parent.set_view_pin("8888")
+    payload_config.parent.set_remote_pin("7777")
     client = TestClient(app)
 
     response = client.put(
@@ -184,6 +223,7 @@ def test_parent_config_ignores_direct_pin_hash_overwrite(monkeypatch, tmp_path):
     assert saved_config.parent.verify_pin("1234")
     assert not saved_config.parent.verify_pin("9999")
     assert not saved_config.parent.verify_view_pin("8888")
+    assert not saved_config.parent.verify_remote_pin("7777")
 
 
 def test_parent_storage_requires_valid_pin():
@@ -264,6 +304,7 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert "view-approval-form" in response.text
     assert "parent-pin" in response.text
     assert "view-pin" in response.text
+    assert "remote-pin" in response.text
     assert "wifi-form" in response.text
     assert "scan-wifi" in response.text
     assert "display-mode" in response.text
@@ -286,6 +327,8 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "Viewing Approval PIN" in response.text
     assert "parent-pin" in response.text
     assert "view-pin" in response.text
+    assert "Remote Control PIN" in response.text
+    assert "remote-pin" in response.text
     assert "Time Limits" in response.text
     assert "YouTube Search" in response.text
     assert "YouTube API Key" in response.text
@@ -356,12 +399,24 @@ def test_remote_key_requires_valid_pin(monkeypatch):
     monkeypatch.setattr(main_module, "remote_control_service", FakeRemoteControl())
     client = TestClient(app)
 
+    admin_pin = client.post("/api/remote/key", json={"pin": "1234", "key": "up"})
     rejected = client.post("/api/remote/key", json={"pin": "0000", "key": "up"})
-    accepted = client.post("/api/remote/key", json={"pin": "1234", "key": "up"})
+    accepted = client.post("/api/remote/key", json={"pin": "2580", "key": "up"})
 
+    assert admin_pin.status_code == 403
     assert rejected.status_code == 403
     assert accepted.status_code == 200
     assert pressed == ["up"]
+
+
+def test_remote_unlock_uses_remote_pin():
+    client = TestClient(app)
+
+    admin_pin = client.post("/api/remote/unlock", json={"pin": "1234"})
+    remote_pin = client.post("/api/remote/unlock", json={"pin": "2580"})
+
+    assert admin_pin.status_code == 403
+    assert remote_pin.status_code == 200
 
 
 def test_remote_key_rejects_unsupported_key(monkeypatch):
@@ -372,7 +427,7 @@ def test_remote_key_rejects_unsupported_key(monkeypatch):
     monkeypatch.setattr(main_module, "remote_control_service", FakeRemoteControl())
     client = TestClient(app)
 
-    response = client.post("/api/remote/key", json={"pin": "1234", "key": "ctrl_l"})
+    response = client.post("/api/remote/key", json={"pin": "2580", "key": "ctrl_l"})
 
     assert response.status_code == 400
 
@@ -388,7 +443,7 @@ def test_remote_text_requires_valid_pin(monkeypatch):
     client = TestClient(app)
 
     rejected = client.post("/api/remote/type", json={"pin": "0000", "text": "bluey"})
-    accepted = client.post("/api/remote/type", json={"pin": "1234", "text": "bluey"})
+    accepted = client.post("/api/remote/type", json={"pin": "2580", "text": "bluey"})
 
     assert rejected.status_code == 403
     assert accepted.status_code == 200

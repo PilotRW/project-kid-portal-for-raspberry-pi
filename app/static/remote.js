@@ -51,7 +51,7 @@ async function postJson(url, body) {
 }
 
 async function verifyPin(pin) {
-  await postJson("/api/admin/state", { pin });
+  await postJson("/api/remote/unlock", { pin });
 }
 
 async function unlock(pin) {
@@ -77,7 +77,7 @@ async function sendKey(key, sourceButton = null) {
     await postJson("/api/remote/key", { pin: state.pin, key });
     setStatus(remoteStatus, "Sent");
   } catch (error) {
-    if (error.message.includes("Invalid PIN") || error.message.includes("locked")) {
+    if (error.message.includes("Invalid remote PIN") || error.message.includes("locked")) {
       sessionStorage.removeItem("kidPortalRemotePin");
       state.pin = "";
       showLogin(error.message);

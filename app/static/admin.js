@@ -216,6 +216,7 @@ function renderSettings() {
   document.querySelector("#display-mode").value = adminState.config.display?.mode || "1080p";
   document.querySelector("#parent-pin").value = "";
   document.querySelector("#view-pin").value = "";
+  document.querySelector("#remote-pin").value = "";
 }
 
 function renderHistory(items) {
@@ -378,6 +379,7 @@ async function saveConfig() {
   syncSettings();
   const parentPin = document.querySelector("#parent-pin").value.trim();
   const viewPin = document.querySelector("#view-pin").value.trim();
+  const remotePin = document.querySelector("#remote-pin").value.trim();
   if (parentPin && !/^\d{4,12}$/.test(parentPin)) {
     saveStatus.textContent = "Parent PIN must be 4-12 digits.";
     return;
@@ -386,8 +388,20 @@ async function saveConfig() {
     saveStatus.textContent = "Viewing PIN must be 4-12 digits.";
     return;
   }
+  if (remotePin && !/^\d{4,12}$/.test(remotePin)) {
+    saveStatus.textContent = "Remote PIN must be 4-12 digits.";
+    return;
+  }
   if (parentPin && viewPin && parentPin === viewPin) {
     saveStatus.textContent = "Parent PIN and viewing PIN must be different.";
+    return;
+  }
+  if (parentPin && remotePin && parentPin === remotePin) {
+    saveStatus.textContent = "Parent PIN and remote PIN must be different.";
+    return;
+  }
+  if (viewPin && remotePin && viewPin === remotePin) {
+    saveStatus.textContent = "Viewing PIN and remote PIN must be different.";
     return;
   }
   const response = await fetch("/api/parent/config", {
@@ -398,6 +412,7 @@ async function saveConfig() {
       config: adminState.config,
       parent_pin: parentPin || null,
       view_pin: viewPin || null,
+      remote_pin: remotePin || null,
     }),
   });
   saveStatus.textContent = response.ok ? "Saved." : "Save failed.";
@@ -408,6 +423,7 @@ async function saveConfig() {
     }
     document.querySelector("#parent-pin").value = "";
     document.querySelector("#view-pin").value = "";
+    document.querySelector("#remote-pin").value = "";
     await loadAdminState();
   }
 }

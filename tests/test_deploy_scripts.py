@@ -104,6 +104,24 @@ def test_parent_pin_recovery_tool_rejects_viewing_pin(tmp_path):
     assert "different from viewing PIN" in result.stderr
 
 
+def test_parent_pin_recovery_tool_rejects_remote_pin(tmp_path):
+    config_path = tmp_path / "config.json"
+    remote_hash = hashlib.sha256("2580".encode("utf-8")).hexdigest()
+    config_path.write_text(json.dumps({"parent": {"pin_sha256": "old", "remote_pin_sha256": remote_hash}}), encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "deploy/scripts/kid-portal-reset-parent-pin.py"), "2580", str(config_path)],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    assert result.returncode == 2
+    assert data["parent"]["pin_sha256"] == "old"
+    assert "different from remote PIN" in result.stderr
+
+
 def test_keyboard_is_centered_against_kiosk_stage():
     styles = (REPO_ROOT / "app/static/styles.css").read_text(encoding="utf-8")
 

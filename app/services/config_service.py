@@ -39,6 +39,7 @@ class FilteringConfig(BaseModel):
 class ParentConfig(BaseModel):
     pin_sha256: str
     view_pin_sha256: str = "fe2592b42a727e977f055947385b709cc82b16b9a87f88c6abf3900d65d0cdc3"
+    remote_pin_sha256: str = "ed946f65d2c785d90e827c5ffd879ce3b49c68d4c88013074176a7e73bc58bcf"
     default_unrestricted_minutes: int = Field(default=30, ge=1, le=240)
 
     def verify_pin(self, pin: str) -> bool:
@@ -52,6 +53,12 @@ class ParentConfig(BaseModel):
 
     def set_view_pin(self, pin: str) -> None:
         self.view_pin_sha256 = hashlib.sha256(pin.encode("utf-8")).hexdigest()
+
+    def verify_remote_pin(self, pin: str) -> bool:
+        return hashlib.sha256(pin.encode("utf-8")).hexdigest() == self.remote_pin_sha256
+
+    def set_remote_pin(self, pin: str) -> None:
+        self.remote_pin_sha256 = hashlib.sha256(pin.encode("utf-8")).hexdigest()
 
 
 class LimitConfig(BaseModel):

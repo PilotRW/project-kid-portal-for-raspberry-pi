@@ -63,6 +63,9 @@ def main() -> int:
     if parent.get("view_pin_sha256") == new_hash:
         print("Parent PIN must be different from viewing PIN.", file=sys.stderr)
         return 2
+    if parent.get("remote_pin_sha256") == new_hash:
+        print("Parent PIN must be different from remote PIN.", file=sys.stderr)
+        return 2
 
     parent["pin_sha256"] = new_hash
     atomic_write_json(config_path, data)

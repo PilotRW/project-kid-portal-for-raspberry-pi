@@ -66,6 +66,7 @@ class ParentConfigUpdate(BaseModel):
     config: PortalConfig
     parent_pin: str | None = None
     view_pin: str | None = None
+    remote_pin: str | None = None
 
 
 class ParentPinRequest(BaseModel):
@@ -162,6 +163,7 @@ ADMIN_SURFACE_ALLOWED_PATHS = {
     "/remote",
     "/api/admin/state",
     "/api/admin/youtube/history/clear",
+    "/api/remote/unlock",
     "/api/remote/key",
     "/api/remote/type",
     "/api/parent/youtube/key",
@@ -255,6 +257,18 @@ def verify_view_pin(pin: str) -> PortalConfig:
     if not config.parent.verify_view_pin(pin):
         raise HTTPException(status_code=403, detail="Invalid viewing PIN")
     return config
+
+
+def verify_remote_pin(pin: str) -> PortalConfig:
+    config = get_config()
+    if not config.parent.verify_remote_pin(pin):
+        raise HTTPException(status_code=403, detail="Invalid remote PIN")
+    return config
+
+
+def validate_new_pin(label: str, pin: str) -> None:
+    if len(pin) < 4 or len(pin) > 12 or not pin.isdigit():
+        raise HTTPException(status_code=400, detail=f"{label} PIN must be 4-12 digits")
 
 
 def get_config() -> PortalConfig:
@@ -472,30 +486,49 @@ async def write_parent_config(update: ParentConfigUpdate, http_request: Request)
     current_config = get_config()
     parent_pin = update.parent_pin.strip() if update.parent_pin else ""
     view_pin = update.view_pin.strip() if update.view_pin else ""
+    remote_pin = update.remote_pin.strip() if update.remote_pin else ""
 
-    if parent_pin and (len(parent_pin) < 4 or len(parent_pin) > 12 or not parent_pin.isdigit()):
-        raise HTTPException(status_code=400, detail="Parent PIN must be 4-12 digits")
-
-    if view_pin and (len(view_pin) < 4 or len(view_pin) > 12 or not view_pin.isdigit()):
-        raise HTTPException(status_code=400, detail="Viewing PIN must be 4-12 digits")
+    if parent_pin:
+        validate_new_pin("Parent", parent_pin)
+    if view_pin:
+        validate_new_pin("Viewing", view_pin)
+    if remote_pin:
+        validate_new_pin("Remote", remote_pin)
 
     if parent_pin and view_pin and parent_pin == view_pin:
         raise HTTPException(status_code=400, detail="Parent PIN and viewing PIN must be different")
+    if parent_pin and remote_pin and parent_pin == remote_pin:
+        raise HTTPException(status_code=400, detail="Parent PIN and remote PIN must be different")
+    if view_pin and remote_pin and view_pin == remote_pin:
+        raise HTTPException(status_code=400, detail="Viewing PIN and remote PIN must be different")
 
     if parent_pin and current_config.parent.verify_view_pin(parent_pin):
         raise HTTPException(status_code=400, detail="Parent PIN must be different from viewing PIN")
+    if parent_pin and current_config.parent.verify_remote_pin(parent_pin):
+        raise HTTPException(status_code=400, detail="Parent PIN must be different from remote PIN")
 
     if view_pin and current_config.parent.verify_pin(view_pin):
         raise HTTPException(status_code=400, detail="Viewing PIN must be different from parent PIN")
+    if view_pin and current_config.parent.verify_remote_pin(view_pin):
+        raise HTTPException(status_code=400, detail="Viewing PIN must be different from remote PIN")
+
+    if remote_pin and current_config.parent.verify_pin(remote_pin):
+        raise HTTPException(status_code=400, detail="Remote PIN must be different from parent PIN")
+    if remote_pin and current_config.parent.verify_view_pin(remote_pin):
+        raise HTTPException(status_code=400, detail="Remote PIN must be different from viewing PIN")
 
     update.config.parent.pin_sha256 = current_config.parent.pin_sha256
     update.config.parent.view_pin_sha256 = current_config.parent.view_pin_sha256
+    update.config.parent.remote_pin_sha256 = current_config.parent.remote_pin_sha256
 
     if parent_pin:
         update.config.parent.set_pin(parent_pin)
 
     if view_pin:
         update.config.parent.set_view_pin(view_pin)
+
+    if remote_pin:
+        update.config.parent.set_remote_pin(remote_pin)
     config_service.save(update.config)
     return {"status": "saved"}
 
@@ -657,9 +690,15 @@ async def clear_admin_youtube_history(request: ParentPinRequest, http_request: R
     return {"status": "cleared"}
 
 
+@app.post("/api/remote/unlock")
+async def unlock_remote(request: ParentPinRequest) -> dict[str, str]:
+    verify_remote_pin(request.pin)
+    return {"status": "unlocked"}
+
+
 @app.post("/api/remote/key")
 async def send_remote_key(request: RemoteKeyRequest, http_request: Request) -> dict[str, str]:
-    verify_parent_pin(request.pin, http_request)
+    verify_remote_pin(request.pin)
     try:
         remote_control_service.press_key(request.key)
     except ValueError as error:
@@ -671,7 +710,7 @@ async def send_remote_key(request: RemoteKeyRequest, http_request: Request) -> d
 
 @app.post("/api/remote/type")
 async def send_remote_text(request: RemoteTextRequest, http_request: Request) -> dict[str, str]:
-    verify_parent_pin(request.pin, http_request)
+    verify_remote_pin(request.pin)
     try:
         remote_control_service.type_text(request.text)
     except ValueError as error:
