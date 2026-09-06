@@ -141,3 +141,11 @@ def test_keyboard_preview_masks_password_inputs():
     assert "function keyboardPreviewText(input)" in script
     assert 'input.type === "password"' in script
     assert 'return "•".repeat(input.value.length);' in script
+
+
+def test_kiosk_uses_spatial_arrow_navigation():
+    script = (REPO_ROOT / "app/static/app.js").read_text(encoding="utf-8")
+
+    assert "function moveFocusDirection(direction)" in script
+    assert "function directionalScore(direction, current, candidate)" in script
+    assert "moveFocusDirection(event.key.replace(\"Arrow\", \"\").toLowerCase())" in script

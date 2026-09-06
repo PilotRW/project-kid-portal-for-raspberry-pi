@@ -73,10 +73,11 @@ function openSettings() {
 }
 
 function refreshFocus() {
-  const pageFocusables = [...document.querySelectorAll(".view.active button, .view.active input, .view.active .tile")];
+  const pageFocusables = [...document.querySelectorAll(".view.active button, .view.active input, .view.active select, .view.active textarea, .view.active .tile")]
+    .filter((item) => !item.disabled && item.offsetParent !== null);
   const keyboardFocusables = document.querySelector("#keyboard").hidden
     ? []
-    : [...document.querySelectorAll("#keyboard button")];
+    : [...document.querySelectorAll("#keyboard button")].filter((item) => !item.disabled && item.offsetParent !== null);
   state.focusables = [...pageFocusables, ...keyboardFocusables];
   state.focusedIndex = Math.min(state.focusedIndex, Math.max(state.focusables.length - 1, 0));
   setFocus(state.focusedIndex);
@@ -95,6 +96,62 @@ function moveFocus(delta) {
   if (!state.focusables.length) return;
   const next = (state.focusedIndex + delta + state.focusables.length) % state.focusables.length;
   setFocus(next);
+}
+
+function focusCenter(element) {
+  const rect = element.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+    rect,
+  };
+}
+
+function directionalScore(direction, current, candidate) {
+  const dx = candidate.x - current.x;
+  const dy = candidate.y - current.y;
+  const axisDistance = direction === "left" || direction === "right" ? Math.abs(dx) : Math.abs(dy);
+  const crossDistance = direction === "left" || direction === "right" ? Math.abs(dy) : Math.abs(dx);
+  return axisDistance * 4 + crossDistance;
+}
+
+function isCandidateInDirection(direction, current, candidate) {
+  const horizontalOverlap = candidate.rect.left < current.rect.right && candidate.rect.right > current.rect.left;
+  const verticalOverlap = candidate.rect.top < current.rect.bottom && candidate.rect.bottom > current.rect.top;
+  const dx = candidate.x - current.x;
+  const dy = candidate.y - current.y;
+  const tolerance = 8;
+
+  if (direction === "right") return dx > tolerance || (verticalOverlap && candidate.rect.left >= current.rect.right - tolerance);
+  if (direction === "left") return dx < -tolerance || (verticalOverlap && candidate.rect.right <= current.rect.left + tolerance);
+  if (direction === "down") return dy > tolerance || (horizontalOverlap && candidate.rect.top >= current.rect.bottom - tolerance);
+  if (direction === "up") return dy < -tolerance || (horizontalOverlap && candidate.rect.bottom <= current.rect.top + tolerance);
+  return false;
+}
+
+function moveFocusDirection(direction) {
+  if (!state.focusables.length) return;
+  const currentElement = state.focusables[state.focusedIndex];
+  if (!currentElement) {
+    setFocus(0);
+    return;
+  }
+  const current = focusCenter(currentElement);
+  const candidates = state.focusables
+    .map((element, index) => ({ element, index, ...focusCenter(element) }))
+    .filter((candidate) => candidate.index !== state.focusedIndex && isCandidateInDirection(direction, current, candidate))
+    .sort((a, b) => directionalScore(direction, current, a) - directionalScore(direction, current, b));
+
+  if (candidates[0]) {
+    setFocus(candidates[0].index);
+    return;
+  }
+
+  if (direction === "right" || direction === "down") {
+    moveFocus(1);
+  } else {
+    moveFocus(-1);
+  }
 }
 
 async function loadTiles() {
@@ -1002,26 +1059,17 @@ document.addEventListener("keydown", (event) => {
       }
       return;
     }
-    if (isKeyboardOpen && ["ArrowRight", "ArrowDown"].includes(event.key)) {
+    if (isKeyboardOpen && event.key.startsWith("Arrow")) {
       event.preventDefault();
-      moveFocus(1);
-      return;
-    }
-    if (isKeyboardOpen && ["ArrowLeft", "ArrowUp"].includes(event.key)) {
-      event.preventDefault();
-      moveFocus(-1);
+      moveFocusDirection(event.key.replace("Arrow", "").toLowerCase());
       return;
     }
     return;
   }
 
-  if (["ArrowRight", "ArrowDown"].includes(event.key)) {
+  if (event.key.startsWith("Arrow")) {
     event.preventDefault();
-    moveFocus(1);
-  }
-  if (["ArrowLeft", "ArrowUp"].includes(event.key)) {
-    event.preventDefault();
-    moveFocus(-1);
+    moveFocusDirection(event.key.replace("Arrow", "").toLowerCase());
   }
   if (["Enter", " "].includes(event.key)) {
     const target = state.focusables[state.focusedIndex];
