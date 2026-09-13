@@ -336,7 +336,7 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert "styles.css?v=20260822-01" in response.text
     assert "Security" in response.text
     assert "YouTube approval" in response.text
-    assert "app.js?v=20260831-01" in response.text
+    assert "app.js?v=20260913-01" in response.text
 
 
 def test_remote_admin_includes_viewing_pin_control():
@@ -378,7 +378,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "data-rule-filter=\"blocked_keywords\"" in response.text
     assert "data-rule-count=\"blocked_keywords\"" in response.text
     assert "admin.css?v=20260904-01" in response.text
-    assert "admin.js?v=20260904-01" in response.text
+    assert "admin.js?v=20260913-01" in response.text
     assert 'href="/remote"' in response.text
 
 
