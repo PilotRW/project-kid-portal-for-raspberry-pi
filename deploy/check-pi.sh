@@ -22,6 +22,21 @@ echo
 echo "== UFW =="
 sudo ufw status
 echo
+echo "== Network =="
+if command -v iw >/dev/null 2>&1; then
+  iw dev wlan0 get power_save || true
+else
+  echo "iw: not installed"
+fi
+ACTIVE_WIFI_CONNECTION="$(nmcli -t -f NAME,DEVICE connection show --active 2>/dev/null | awk -F: '$2 == "wlan0" {print $1; exit}')"
+if [[ -n "$ACTIVE_WIFI_CONNECTION" ]]; then
+  printf "active_connection=%s\n" "$ACTIVE_WIFI_CONNECTION"
+  printf "wifi_powersave=%s\n" "$(nmcli -g 802-11-wireless.powersave connection show "$ACTIVE_WIFI_CONNECTION" 2>/dev/null || true)"
+fi
+echo
+echo "== Journal =="
+journalctl --list-boots --no-pager | tail -n 5
+echo
 echo "== fail2ban =="
 sudo fail2ban-client status sshd
 echo

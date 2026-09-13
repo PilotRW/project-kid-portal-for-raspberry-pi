@@ -130,6 +130,25 @@ def test_software_update_log_is_readable_by_portal_user():
     assert "kid-portal-software-update.path" in checker
 
 
+def test_network_hardening_and_persistent_logs_are_deployed():
+    installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+    checker = (REPO_ROOT / "deploy/check-pi.sh").read_text(encoding="utf-8")
+    nm_conf = (REPO_ROOT / "deploy/networkmanager/99-kid-portal-wifi.conf").read_text(encoding="utf-8")
+    journald_conf = (REPO_ROOT / "deploy/journald/99-kid-portal.conf").read_text(encoding="utf-8")
+
+    assert "wifi.powersave=2" in nm_conf
+    assert "Storage=persistent" in journald_conf
+    assert "SystemMaxUse=100M" in journald_conf
+    assert "deploy/networkmanager/99-kid-portal-wifi.conf" in installer
+    assert "deploy/journald/99-kid-portal.conf" in installer
+    assert "iw dev wlan0 set power_save off" in installer
+    assert "802-11-wireless.powersave 2" in installer
+    assert "journalctl --list-boots" in checker
+    assert "iw dev wlan0 get power_save" in checker
+    assert "wifi_powersave=" in checker
+    assert "ACTIVE_WIFI_CONNECTION" in checker
+
+
 def test_parent_pin_recovery_tool_is_installed_without_web_sudoers():
     installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
 

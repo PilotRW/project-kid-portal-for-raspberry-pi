@@ -76,6 +76,7 @@ if [[ "$SKIP_APT" != "1" ]]; then
     chromium-browser \
     fail2ban \
     keyd \
+    iw \
     network-manager \
     openbox \
     python3-pip \
@@ -98,6 +99,7 @@ rsync -a --delete \
 chown -R "$PI_USER:$PI_USER" "$APP_DIR"
 
 install -d -m 755 "$CONFIG_DIR" /etc/chromium/policies/managed /etc/X11/xorg.conf.d /etc/sudoers.d
+install -d -m 755 /etc/NetworkManager/conf.d /etc/systemd/journald.conf.d /var/log/journal
 printf "%s\n" "$LAN_CIDR" > "$CONFIG_DIR/lan-cidr"
 chown root:root "$CONFIG_DIR/lan-cidr"
 chmod 644 "$CONFIG_DIR/lan-cidr"
@@ -144,6 +146,8 @@ sudo -u "$PI_USER" .venv/bin/pip install -e .
 cp deploy/systemd/*.service /etc/systemd/system/
 cp deploy/systemd/*.path /etc/systemd/system/
 cp deploy/tmpfiles/kid-portal.conf /etc/tmpfiles.d/kid-portal.conf
+install -m 644 deploy/networkmanager/99-kid-portal-wifi.conf /etc/NetworkManager/conf.d/99-kid-portal-wifi.conf
+install -m 644 deploy/journald/99-kid-portal.conf /etc/systemd/journald.conf.d/99-kid-portal.conf
 systemd-tmpfiles --create /etc/tmpfiles.d/kid-portal.conf
 
 install -m 755 deploy/scripts/kid-portal-network-access.sh /usr/local/sbin/kid-portal-network-access
@@ -175,6 +179,7 @@ install -m 644 deploy/security/sshd-hardening.conf /etc/ssh/sshd_config.d/99-kid
 sshd -t
 
 systemctl daemon-reload
+systemctl restart systemd-journald || true
 systemctl enable fail2ban keyd ssh
 systemctl enable kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-x.service kid-portal-kiosk.service
 configure_tailscale
@@ -192,6 +197,12 @@ fi
 ufw delete allow 8080/tcp >/dev/null 2>&1 || true
 ufw delete allow from "$LAN_CIDR" to any port 8080 proto tcp >/dev/null 2>&1 || true
 ufw --force enable
+
+iw dev wlan0 set power_save off >/dev/null 2>&1 || true
+ACTIVE_WIFI_CONNECTION="$(nmcli -t -f NAME,DEVICE connection show --active 2>/dev/null | awk -F: '$2 == "wlan0" {print $1; exit}')"
+if [[ -n "$ACTIVE_WIFI_CONNECTION" ]]; then
+  nmcli connection modify "$ACTIVE_WIFI_CONNECTION" 802-11-wireless.powersave 2 >/dev/null 2>&1 || true
+fi
 
 systemctl restart ssh fail2ban keyd kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path
 write_chromium_policy
