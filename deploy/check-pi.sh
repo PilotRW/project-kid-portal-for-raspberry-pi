@@ -17,7 +17,7 @@ hostname
 ip -4 -brief addr
 echo
 echo "== Services =="
-systemctl is-active ssh fail2ban kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-x.service kid-portal-kiosk.service
+systemctl is-active ssh fail2ban kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-wifi-watchdog.timer kid-portal-x.service kid-portal-kiosk.service
 echo
 echo "== UFW =="
 sudo ufw status
@@ -33,6 +33,7 @@ if [[ -n "$ACTIVE_WIFI_CONNECTION" ]]; then
   printf "active_connection=%s\n" "$ACTIVE_WIFI_CONNECTION"
   printf "wifi_powersave=%s\n" "$(nmcli -g 802-11-wireless.powersave connection show "$ACTIVE_WIFI_CONNECTION" 2>/dev/null || true)"
 fi
+systemctl list-timers kid-portal-wifi-watchdog.timer --no-pager || true
 echo
 echo "== Journal =="
 journalctl --list-boots --no-pager | tail -n 5

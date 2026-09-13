@@ -145,6 +145,7 @@ sudo -u "$PI_USER" .venv/bin/pip install -e .
 
 cp deploy/systemd/*.service /etc/systemd/system/
 cp deploy/systemd/*.path /etc/systemd/system/
+cp deploy/systemd/*.timer /etc/systemd/system/
 cp deploy/tmpfiles/kid-portal.conf /etc/tmpfiles.d/kid-portal.conf
 install -m 644 deploy/networkmanager/99-kid-portal-wifi.conf /etc/NetworkManager/conf.d/99-kid-portal-wifi.conf
 install -m 644 deploy/journald/99-kid-portal.conf /etc/systemd/journald.conf.d/99-kid-portal.conf
@@ -157,6 +158,7 @@ install -m 755 deploy/scripts/kid-portal-wifi.sh /usr/local/sbin/kid-portal-wifi
 install -m 755 deploy/scripts/kid-portal-youtube-key.sh /usr/local/sbin/kid-portal-youtube-key
 install -m 755 deploy/scripts/kid-portal-software-update.sh /usr/local/sbin/kid-portal-software-update
 install -m 755 deploy/scripts/kid-portal-kiosk-control.sh /usr/local/sbin/kid-portal-kiosk-control
+install -m 755 deploy/scripts/kid-portal-wifi-watchdog.sh /usr/local/sbin/kid-portal-wifi-watchdog
 install -m 755 deploy/scripts/kid-portal-reset-parent-pin.py /usr/local/sbin/kid-portal-reset-parent-pin
 install -m 440 deploy/sudoers/kid-portal-wifi /etc/sudoers.d/kid-portal-wifi
 install -m 440 deploy/sudoers/kid-portal-youtube-key /etc/sudoers.d/kid-portal-youtube-key
@@ -181,7 +183,7 @@ sshd -t
 systemctl daemon-reload
 systemctl restart systemd-journald || true
 systemctl enable fail2ban keyd ssh
-systemctl enable kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-x.service kid-portal-kiosk.service
+systemctl enable kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-wifi-watchdog.timer kid-portal-x.service kid-portal-kiosk.service
 configure_tailscale
 
 if [[ "$ALLOW_LAN_SSH" == "1" ]]; then
@@ -204,7 +206,7 @@ if [[ -n "$ACTIVE_WIFI_CONNECTION" ]]; then
   nmcli connection modify "$ACTIVE_WIFI_CONNECTION" 802-11-wireless.powersave 2 >/dev/null 2>&1 || true
 fi
 
-systemctl restart ssh fail2ban keyd kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path
+systemctl restart ssh fail2ban keyd kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-wifi-watchdog.timer
 write_chromium_policy
 systemctl restart kid-portal-x.service kid-portal-kiosk.service
 

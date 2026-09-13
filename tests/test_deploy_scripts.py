@@ -149,6 +149,24 @@ def test_network_hardening_and_persistent_logs_are_deployed():
     assert "ACTIVE_WIFI_CONNECTION" in checker
 
 
+def test_wifi_watchdog_is_deployed_and_self_heals_networkmanager():
+    installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+    checker = (REPO_ROOT / "deploy/check-pi.sh").read_text(encoding="utf-8")
+    watchdog = (REPO_ROOT / "deploy/scripts/kid-portal-wifi-watchdog.sh").read_text(encoding="utf-8")
+    service = (REPO_ROOT / "deploy/systemd/kid-portal-wifi-watchdog.service").read_text(encoding="utf-8")
+    timer = (REPO_ROOT / "deploy/systemd/kid-portal-wifi-watchdog.timer").read_text(encoding="utf-8")
+
+    assert "kid-portal-wifi-watchdog.sh /usr/local/sbin/kid-portal-wifi-watchdog" in installer
+    assert "cp deploy/systemd/*.timer /etc/systemd/system/" in installer
+    assert "kid-portal-wifi-watchdog.timer" in installer
+    assert "kid-portal-wifi-watchdog.timer" in checker
+    assert "ping -I wlan0" in watchdog
+    assert "nmcli connection up" in watchdog
+    assert "systemctl restart NetworkManager.service" in watchdog
+    assert "ExecStart=/usr/local/sbin/kid-portal-wifi-watchdog" in service
+    assert "OnUnitActiveSec=1min" in timer
+
+
 def test_parent_pin_recovery_tool_is_installed_without_web_sudoers():
     installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
 

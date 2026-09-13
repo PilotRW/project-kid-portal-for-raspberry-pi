@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Kid Portal Wi-Fi watchdog every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=15s
+Unit=kid-portal-wifi-watchdog.service
+
+[Install]
+WantedBy=timers.target
