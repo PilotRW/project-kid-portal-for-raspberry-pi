@@ -35,6 +35,40 @@ def test_keyword_blacklist_blocks():
     assert result.decision == Decision.BLOCK
 
 
+def test_keyword_blacklist_matches_whole_words_only():
+    engine = FilteringEngine(FilteringConfig(blocked_keywords=["butt"], allowed_keywords=["butter"]))
+
+    blocked = engine.evaluate_video(candidate(title="Rude butt joke"))
+    allowed = engine.evaluate_video(candidate(title="How butter is made"))
+    speed = engine.evaluate_video(candidate(title="Speed records"))
+
+    assert blocked.decision == Decision.BLOCK
+    assert "blocked keyword: butt" in blocked.reasons
+    assert allowed.decision == Decision.ALLOW
+    assert "allowed keyword: butter" in allowed.reasons
+    assert speed.decision == Decision.REQUIRE_PARENT_APPROVAL
+
+
+def test_short_keyword_blacklist_does_not_match_inside_words():
+    engine = FilteringEngine(FilteringConfig(blocked_keywords=["pee"], allowed_keywords=["speed"]))
+
+    blocked = engine.evaluate_video(candidate(title="Pee joke"))
+    allowed = engine.evaluate_video(candidate(title="Speed records"))
+
+    assert blocked.decision == Decision.BLOCK
+    assert "blocked keyword: pee" in blocked.reasons
+    assert allowed.decision == Decision.ALLOW
+    assert "allowed keyword: speed" in allowed.reasons
+
+
+def test_keyword_blacklist_still_matches_phrases():
+    engine = FilteringEngine(FilteringConfig(blocked_keywords=["poppy playtime"]))
+
+    result = engine.evaluate_video(candidate(title="Poppy Playtime chapter"))
+
+    assert result.decision == Decision.BLOCK
+
+
 def test_approval_keyword_requires_parent():
     engine = FilteringEngine(FilteringConfig(approval_keywords=["gaming"]))
     result = engine.evaluate_video(candidate(title="Gaming history"))

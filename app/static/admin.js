@@ -75,6 +75,7 @@ function renderState(data) {
   renderMonitoring(data.monitoring);
   renderHistory(data.history);
   renderApprovalLog(data.approvals || []);
+  renderBlockedLog(data.blocked || []);
   renderFilterInsights(data.filter_insights || {});
   renderSettings();
   renderSites();
@@ -260,6 +261,26 @@ function renderApprovalLog(items) {
       <strong>${escapeHtml(item.title || item.video_id)}</strong>
       <span>${escapeHtml(item.channel_title || item.channel_id || "unknown channel")} - ${escapeHtml(item.decision)} - ${escapeHtml(reasons)}</span>
       <span>${escapeHtml(formatDateTime(item.approved_at))}</span>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function renderBlockedLog(items) {
+  const list = document.querySelector("#blocked-log-list");
+  list.innerHTML = "";
+  if (!items.length) {
+    list.innerHTML = '<p class="empty">No blocked videos yet.</p>';
+    return;
+  }
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "history-card";
+    const reasons = item.reasons?.length ? item.reasons.join(", ") : "no filter reasons";
+    card.innerHTML = `
+      <strong>${escapeHtml(item.title || item.video_id)}</strong>
+      <span>${escapeHtml(item.channel_title || item.channel_id || "unknown channel")} - ${escapeHtml(reasons)}</span>
+      <span>${escapeHtml(formatDateTime(item.blocked_at))}</span>
     `;
     list.appendChild(card);
   });

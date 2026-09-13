@@ -26,6 +26,7 @@ from app.services.usage_tracker import UsageTrackerService
 from app.services.wifi_manager import WifiConnectResult, WifiManager, WifiNetwork, WifiStatus
 from app.services.youtube_api import YouTubeApiError, YouTubeApiService
 from app.services.youtube_approval_log import YouTubeApprovalLogService
+from app.services.youtube_blocked_log import YouTubeBlockedLogService
 from app.services.youtube_key_manager import YouTubeKeyManager, YouTubeKeyUpdateResult
 from app.services.youtube_search_cache import YouTubeSearchCacheService
 
@@ -37,6 +38,7 @@ youtube_service = YouTubeApiService()
 search_history_service = SearchHistoryService()
 youtube_search_cache_service = YouTubeSearchCacheService()
 youtube_approval_log_service = YouTubeApprovalLogService()
+youtube_blocked_log_service = YouTubeBlockedLogService()
 filter_insights_service = FilterInsightsService()
 network_info_service = NetworkInfoService()
 usage_tracker_service = UsageTrackerService()
@@ -619,6 +621,8 @@ async def search_youtube(q: str = Query(min_length=1, max_length=120)) -> dict[s
     for item in evaluated_models:
         if item.decision == Decision.ALLOW and item.reasons == ["default decision: allow"]:
             filter_insights_service.record_gap(item.video.channel_title, item.video.title)
+        if item.decision == Decision.BLOCK:
+            youtube_blocked_log_service.add(item)
     evaluated = [item.model_dump() for item in evaluated_models]
     search_history_service.add(q, result_count=len(evaluated_models), mode=mode)
     return {
@@ -724,6 +728,7 @@ async def read_admin_state(request: ParentPinRequest, http_request: Request) -> 
         "usage": usage_tracker_service.status(config.limits.daily_minutes).model_dump(mode="json"),
         "history": [entry.model_dump(mode="json") for entry in search_history_service.list_entries()],
         "approvals": [entry.model_dump(mode="json") for entry in youtube_approval_log_service.list_entries()],
+        "blocked": [entry.model_dump(mode="json") for entry in youtube_blocked_log_service.list_entries()],
         "filter_insights": {
             "gaps": [entry.model_dump(mode="json") for entry in filter_insights_service.top("gap")],
             "approvals": [entry.model_dump(mode="json") for entry in filter_insights_service.top("approval")],
@@ -905,6 +910,7 @@ async def watch_youtube(video_id: str) -> str:
         return render_watch_page(video_id, limit_reached=True)
     evaluated = await evaluate_youtube_video_for_playback(video_id)
     if evaluated.decision == Decision.BLOCK:
+        youtube_blocked_log_service.add(evaluated)
         return render_watch_page(video_id, blocked_message="This video is blocked by Kid Portal filters.")
     if evaluated.decision == Decision.REQUIRE_PARENT_APPROVAL and not is_youtube_video_approved(video_id):
         return render_watch_page(video_id, blocked_message="Parent approval is required for this video.")

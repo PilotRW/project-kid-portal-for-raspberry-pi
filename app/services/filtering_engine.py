@@ -1,3 +1,4 @@
+import re
 from enum import StrEnum
 
 from pydantic import BaseModel
@@ -102,7 +103,15 @@ class FilteringEngine:
 
     @staticmethod
     def _keyword_hits(text: str, keywords: list[str]) -> list[str]:
-        return [keyword for keyword in keywords if keyword.lower() in text]
+        return [keyword for keyword in keywords if FilteringEngine._keyword_matches(text, keyword)]
+
+    @staticmethod
+    def _keyword_matches(text: str, keyword: str) -> bool:
+        normalized = keyword.strip().lower()
+        if not normalized:
+            return False
+        pattern = rf"(?<!\w){re.escape(normalized)}(?!\w)"
+        return re.search(pattern, text) is not None
 
     @staticmethod
     def _category_matches(category: str | None, configured: list[str]) -> bool:

@@ -110,6 +110,13 @@ def test_youtube_approval_log_is_deployed():
     assert "KID_PORTAL_YOUTUBE_APPROVAL_LOG" in installer
 
 
+def test_youtube_blocked_log_is_deployed():
+    installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
+
+    assert "youtube-blocked-log.json" in installer
+    assert "KID_PORTAL_YOUTUBE_BLOCKED_LOG" in installer
+
+
 def test_filter_insights_is_deployed():
     installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
 
@@ -247,6 +254,13 @@ def test_keyboard_preview_masks_password_inputs():
     assert "function keyboardPreviewText(input)" in script
     assert 'input.type === "password"' in script
     assert 'return "•".repeat(input.value.length);' in script
+
+
+def test_kiosk_hides_blocked_filter_reasons_from_results():
+    script = (REPO_ROOT / "app/static/app.js").read_text(encoding="utf-8")
+
+    assert 'item.decision === "BLOCK"' in script
+    assert '"Blocked by filters"' in script
 
 
 def test_kiosk_uses_spatial_arrow_navigation():

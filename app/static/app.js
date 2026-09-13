@@ -273,6 +273,9 @@ async function searchYouTube(event) {
       if (needsApproval) {
         card.addEventListener("click", () => requestViewApproval(item.video));
       }
+      const reasonText = item.decision === "BLOCK"
+        ? "Blocked by filters"
+        : item.reasons.join(", ");
       card.innerHTML = `
         <span class="video-thumbnail">
           ${thumbnail}
@@ -281,7 +284,7 @@ async function searchYouTube(event) {
         <span class="result-copy">
           <h3>${escapeHtml(item.video.title)}</h3>
           <p>${escapeHtml(item.video.channel_title)}</p>
-          <small>${escapeHtml(item.reasons.join(", "))}</small>
+          <small>${escapeHtml(reasonText)}</small>
         </span>
       `;
       results.appendChild(card);

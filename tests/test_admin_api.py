@@ -33,6 +33,45 @@ class FakeApprovalLog:
         return self.entries
 
 
+class FakeBlockedLog:
+    def __init__(self):
+        self.entries = []
+
+    def add(self, evaluated):
+        self.entries.append(evaluated)
+
+    def list_entries(self):
+        return self.entries
+
+
+class FakeSearchCache:
+    def __init__(self):
+        self.saved = []
+
+    def get(self, query, limit, safe_search):
+        return None
+
+    def set(self, query, limit, safe_search, results):
+        self.saved.append((query, limit, safe_search, results))
+
+    def clear(self):
+        self.saved.clear()
+
+
+class FakeSearchHistory:
+    def __init__(self):
+        self.entries = []
+
+    def add(self, query, result_count, mode):
+        self.entries.append((query, result_count, mode))
+
+    def list_entries(self):
+        return []
+
+    def clear(self):
+        self.entries.clear()
+
+
 class FakeFilterInsights:
     def __init__(self):
         self.gaps = []
@@ -118,6 +157,7 @@ def test_admin_state_accepts_parent_pin_without_exposing_key():
     assert "youtube" in payload
     assert "history" in payload
     assert "approvals" in payload
+    assert "blocked" in payload
     assert "usage" in payload
     assert "network_access" in payload
     assert "api_key" not in payload["youtube"]
@@ -336,7 +376,7 @@ def test_kiosk_settings_include_debug_terminal_controls():
     assert "styles.css?v=20260822-01" in response.text
     assert "Security" in response.text
     assert "YouTube approval" in response.text
-    assert "app.js?v=20260913-01" in response.text
+    assert "app.js?v=20260913-02" in response.text
 
 
 def test_remote_admin_includes_viewing_pin_control():
@@ -358,6 +398,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "youtube-key-form" in response.text
     assert "Short video threshold" in response.text
     assert "Parent Approval Log" in response.text
+    assert "Blocked Video Log" in response.text
     assert "Unmatched" in response.text
     assert "Default-Allow Gaps" in response.text
     assert "tab-nav" in response.text
@@ -378,7 +419,7 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "data-rule-filter=\"blocked_keywords\"" in response.text
     assert "data-rule-count=\"blocked_keywords\"" in response.text
     assert "admin.css?v=20260904-01" in response.text
-    assert "admin.js?v=20260913-01" in response.text
+    assert "admin.js?v=20260913-02" in response.text
     assert 'href="/remote"' in response.text
 
 
@@ -712,6 +753,29 @@ def test_youtube_approval_uses_separate_viewing_pin(monkeypatch):
     assert insights.approvals == [("Safe Learning", "Science lesson for kids")]
 
 
+def test_youtube_search_logs_blocked_results(monkeypatch):
+    class FakeYouTubeService:
+        def status(self):
+            return {"configured": True, "mode": "live", "source": "test"}
+
+        async def search(self, q, limit, safe_search):
+            return [video_candidate("blocked-123", title="Extreme prank challenge")]
+
+    blocked_log = FakeBlockedLog()
+    monkeypatch.setattr(main_module, "youtube_service", FakeYouTubeService())
+    monkeypatch.setattr(main_module, "youtube_search_cache_service", FakeSearchCache())
+    monkeypatch.setattr(main_module, "search_history_service", FakeSearchHistory())
+    monkeypatch.setattr(main_module, "youtube_blocked_log_service", blocked_log)
+    client = TestClient(app)
+
+    response = client.get("/api/youtube/search?q=prank")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["results"][0]["decision"] == "BLOCK"
+    assert [entry.video.video_id for entry in blocked_log.entries] == ["blocked-123"]
+
+
 def test_admin_history_clear_requires_valid_pin():
     client = TestClient(app)
 
@@ -754,11 +818,13 @@ def test_watch_page_sandboxes_youtube_embed(monkeypatch):
 
 
 def test_watch_page_blocks_filtered_video(monkeypatch):
+    blocked_log = FakeBlockedLog()
     monkeypatch.setattr(
         main_module,
         "youtube_service",
         FakeYouTubeLookup({"video-123": video_candidate("video-123", title="Extreme prank challenge")}),
     )
+    monkeypatch.setattr(main_module, "youtube_blocked_log_service", blocked_log)
     client = TestClient(app)
 
     response = client.get("/youtube/watch/video-123")
@@ -766,6 +832,7 @@ def test_watch_page_blocks_filtered_video(monkeypatch):
     assert response.status_code == 200
     assert "This video is blocked by Kid Portal filters." in response.text
     assert "youtube-nocookie.com/embed/video-123" not in response.text
+    assert [entry.video.video_id for entry in blocked_log.entries] == ["video-123"]
 
 
 def test_watch_page_requires_parent_approval_for_default_decision(monkeypatch):
