@@ -253,6 +253,29 @@ def test_parent_monitoring_requires_valid_pin():
     assert "hottest_process" in payload
     assert "temperature_c" in payload
     assert "throttled_state" in payload
+    assert "gpu_render_percent" in payload
+
+
+def test_gpu_render_percent_uses_gpu_stats_delta(tmp_path, monkeypatch):
+    import app.main as main_module
+
+    stats_path = tmp_path / "gpu_stats"
+    monkeypatch.setattr(main_module, "GPU_STATS_PATH", stats_path)
+    monkeypatch.setattr(main_module, "gpu_stats_sample", None)
+
+    stats_path.write_text(
+        "queue\ttimestamp\tjobs\truntime\n"
+        "render\t1000\t10\t200\n",
+        encoding="utf-8",
+    )
+    assert main_module.read_gpu_render_percent() is None
+
+    stats_path.write_text(
+        "queue\ttimestamp\tjobs\truntime\n"
+        "render\t3000\t12\t700\n",
+        encoding="utf-8",
+    )
+    assert main_module.read_gpu_render_percent() == 25.0
 
 
 def test_terminal_controls_are_pin_protected():

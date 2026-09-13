@@ -176,6 +176,9 @@ function renderMonitoring(monitoring) {
   const temperature = Number.isFinite(monitoring.temperature_c)
     ? `${monitoring.temperature_c.toFixed(1)} C`
     : "n/a";
+  const gpuRender = Number.isFinite(monitoring.gpu_render_percent)
+    ? `${monitoring.gpu_render_percent.toFixed(1)}%`
+    : "n/a";
   const throttled = monitoring.throttled_state || "n/a";
   const processRows = monitoring.top_processes?.length
     ? monitoring.top_processes.map((process) => `
@@ -197,6 +200,11 @@ function renderMonitoring(monitoring) {
         <span>Throttling</span>
         <strong>${escapeHtml(throttled)}</strong>
         <small>0x0 is healthy</small>
+      </article>
+      <article class="stat-card">
+        <span>GPU render</span>
+        <strong>${escapeHtml(gpuRender)}</strong>
+        <small>V3D busy</small>
       </article>
     </section>
     ${processRows}

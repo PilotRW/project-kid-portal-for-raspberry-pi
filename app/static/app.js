@@ -707,6 +707,8 @@ async function loadParentMonitoring() {
   }
   const data = await response.json();
   const hottest = data.hottest_process;
+  const temperature = Number.isFinite(data.temperature_c) ? `${data.temperature_c.toFixed(1)} C` : "n/a";
+  const gpuRender = Number.isFinite(data.gpu_render_percent) ? `${data.gpu_render_percent.toFixed(1)}%` : "n/a";
   const rows = data.top_processes.map((process) => `
     <article class="process-row">
       <strong>${escapeHtml(process.command)}</strong>
@@ -721,6 +723,16 @@ async function loadParentMonitoring() {
       <span>Highest load</span>
       <strong>${hottest ? escapeHtml(hottest.command) : "n/a"}</strong>
       <small>${hottest ? `${escapeHtml(hottest.cpu_percent.toFixed(1))}% CPU - PID ${escapeHtml(String(hottest.pid))}` : "No process data"}</small>
+    </article>
+    <article class="monitor-card">
+      <span>Temperature</span>
+      <strong>${escapeHtml(temperature)}</strong>
+      <small>CPU / SoC</small>
+    </article>
+    <article class="monitor-card">
+      <span>GPU render</span>
+      <strong>${escapeHtml(gpuRender)}</strong>
+      <small>V3D busy</small>
     </article>
     <div class="process-list">${rows}</div>
   `;

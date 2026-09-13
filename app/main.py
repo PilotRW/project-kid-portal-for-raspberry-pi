@@ -50,12 +50,14 @@ NETWORK_ACCESS_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_REQ
 NETWORK_ACCESS_STATE_PATH = Path(os.environ.get("KID_PORTAL_NETWORK_ACCESS_STATE", "/run/kid-portal/network-access.state"))
 SOFTWARE_UPDATE_REQUEST_PATH = Path(os.environ.get("KID_PORTAL_SOFTWARE_UPDATE_REQUEST", "/run/kid-portal/software-update.request"))
 SOFTWARE_UPDATE_LOG_PATH = Path(os.environ.get("KID_PORTAL_SOFTWARE_UPDATE_LOG", "/var/log/kid-portal-software-update.log"))
+GPU_STATS_PATH = Path(os.environ.get("KID_PORTAL_GPU_STATS_PATH", "/sys/class/drm/card0/device/gpu_stats"))
 ADMIN_PIN_MAX_ATTEMPTS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_MAX_ATTEMPTS", "8"))
 ADMIN_PIN_FINDTIME_SECONDS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_FINDTIME_SECONDS", "600"))
 ADMIN_PIN_LOCKOUT_SECONDS = int(os.environ.get("KID_PORTAL_ADMIN_PIN_LOCKOUT_SECONDS", "600"))
 VIEWING_APPROVAL_SECONDS = int(os.environ.get("KID_PORTAL_VIEWING_APPROVAL_SECONDS", "1800"))
 admin_pin_attempts: dict[str, dict[str, object]] = {}
 approved_youtube_videos: dict[str, float] = {}
+gpu_stats_sample: tuple[int, int] | None = None
 
 app = FastAPI(title="Kid Portal", version="0.1.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -113,6 +115,7 @@ class SystemMonitoring(BaseModel):
     hottest_process: ProcessInfo | None
     temperature_c: float | None = None
     throttled_state: str | None = None
+    gpu_render_percent: float | None = None
 
 
 class SystemActionResult(BaseModel):
@@ -329,6 +332,7 @@ def read_storage_info() -> StorageInfo:
 def read_system_monitoring() -> SystemMonitoring:
     temperature_c = read_temperature_c()
     throttled_state = read_throttled_state()
+    gpu_render_percent = read_gpu_render_percent()
     try:
         output = subprocess.check_output(
             ["ps", "-eo", "pid,user,pcpu,pmem,comm,args", "--sort=-pcpu"],
@@ -341,6 +345,7 @@ def read_system_monitoring() -> SystemMonitoring:
             hottest_process=None,
             temperature_c=temperature_c,
             throttled_state=throttled_state,
+            gpu_render_percent=gpu_render_percent,
         )
     rows = []
     for line in output.splitlines()[1:11]:
@@ -363,6 +368,7 @@ def read_system_monitoring() -> SystemMonitoring:
         hottest_process=rows[0] if rows else None,
         temperature_c=temperature_c,
         throttled_state=throttled_state,
+        gpu_render_percent=gpu_render_percent,
     )
 
 
@@ -387,6 +393,48 @@ def read_throttled_state() -> str | None:
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return None
     return output.split("=", 1)[1] if "=" in output else output
+
+
+def read_gpu_render_percent() -> float | None:
+    global gpu_stats_sample
+    sample = read_gpu_render_sample(GPU_STATS_PATH)
+    if sample is None:
+        gpu_stats_sample = None
+        return None
+    previous = gpu_stats_sample
+    gpu_stats_sample = sample
+    if previous is None:
+        return None
+    previous_timestamp, previous_runtime = previous
+    timestamp, runtime = sample
+    elapsed = timestamp - previous_timestamp
+    busy = runtime - previous_runtime
+    if elapsed <= 0 or busy < 0:
+        return None
+    return round(max(0, min(100, (busy / elapsed) * 100)), 1)
+
+
+def read_gpu_render_sample(path: Path) -> tuple[int, int] | None:
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    timestamp: int | None = None
+    render_runtime: int | None = None
+    for line in content.splitlines():
+        parts = line.split()
+        if len(parts) < 4:
+            continue
+        if parts[0] == "render":
+            try:
+                timestamp = int(parts[1])
+                render_runtime = int(parts[3])
+            except ValueError:
+                return None
+            break
+    if timestamp is None or render_runtime is None:
+        return None
+    return timestamp, render_runtime
 
 
 def read_network_access_state() -> NetworkAccessState:
