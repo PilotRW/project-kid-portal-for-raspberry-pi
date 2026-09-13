@@ -148,6 +148,7 @@ systemd-tmpfiles --create /etc/tmpfiles.d/kid-portal.conf
 
 install -m 755 deploy/scripts/kid-portal-network-access.sh /usr/local/sbin/kid-portal-network-access
 install -m 755 deploy/scripts/kid-portal-display-mode.sh /usr/local/sbin/kid-portal-display-mode
+install -m 755 deploy/scripts/kid-portal-launch-chromium.sh /usr/local/sbin/kid-portal-launch-chromium
 install -m 755 deploy/scripts/kid-portal-wifi.sh /usr/local/sbin/kid-portal-wifi
 install -m 755 deploy/scripts/kid-portal-youtube-key.sh /usr/local/sbin/kid-portal-youtube-key
 install -m 755 deploy/scripts/kid-portal-software-update.sh /usr/local/sbin/kid-portal-software-update

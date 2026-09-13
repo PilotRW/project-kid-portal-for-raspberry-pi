@@ -12,12 +12,30 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 def test_kiosk_control_sudoers_is_installed():
     installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
     sudoers = (REPO_ROOT / "deploy/sudoers/kid-portal-kiosk-control").read_text(encoding="utf-8")
+    kiosk_control = (REPO_ROOT / "deploy/scripts/kid-portal-kiosk-control.sh").read_text(encoding="utf-8")
 
     assert "kid-portal-kiosk-control.sh /usr/local/sbin/kid-portal-kiosk-control" in installer
+    assert "kid-portal-launch-chromium.sh /usr/local/sbin/kid-portal-launch-chromium" in installer
     assert "deploy/sudoers/kid-portal-kiosk-control" in installer
     assert "visudo -cf /etc/sudoers.d/kid-portal-kiosk-control" in installer
     assert "/usr/local/sbin/kid-portal-kiosk-control restart-kiosk" in sudoers
     assert "/usr/local/sbin/kid-portal-kiosk-control reboot" in sudoers
+    assert "systemctl stop kid-portal-kiosk.service" in kiosk_control
+    assert "systemctl restart kid-portal-x.service" in kiosk_control
+    assert "systemctl start kid-portal-kiosk.service" in kiosk_control
+
+
+def test_chromium_launcher_pins_window_to_active_display():
+    launcher = (REPO_ROOT / "deploy/scripts/kid-portal-launch-chromium.sh").read_text(encoding="utf-8")
+    service = (REPO_ROOT / "deploy/systemd/kid-portal-kiosk.service").read_text(encoding="utf-8")
+    x_service = (REPO_ROOT / "deploy/systemd/kid-portal-x.service").read_text(encoding="utf-8")
+
+    assert "kid-portal-display-mode" in launcher
+    assert "--window-position=0,0" in launcher
+    assert '--window-size="${WIDTH},${HEIGHT}"' in launcher
+    assert "--start-fullscreen" in launcher
+    assert "ExecStart=/usr/local/sbin/kid-portal-launch-chromium" in service
+    assert "TimeoutStopSec=3" in x_service
 
 
 def test_remote_control_dependency_is_installed():
@@ -181,9 +199,9 @@ def test_keyboard_is_centered_against_kiosk_stage():
 
 
 def test_kiosk_disables_back_forward_cache_for_external_media():
-    unit = (REPO_ROOT / "deploy/systemd/kid-portal-kiosk.service").read_text(encoding="utf-8")
+    launcher = (REPO_ROOT / "deploy/scripts/kid-portal-launch-chromium.sh").read_text(encoding="utf-8")
 
-    assert "--disable-features=Translate,DesktopPWAsTabStrip,BackForwardCache" in unit
+    assert "--disable-features=Translate,DesktopPWAsTabStrip,BackForwardCache" in launcher
 
 
 def test_keyboard_preview_masks_password_inputs():

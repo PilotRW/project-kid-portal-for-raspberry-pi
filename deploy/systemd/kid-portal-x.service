@@ -18,7 +18,7 @@ ExecStart=/usr/bin/startx /usr/bin/openbox-session -- :0
 Restart=always
 RestartSec=2
 KillMode=control-group
-TimeoutStopSec=10
+TimeoutStopSec=3
 SendSIGKILL=yes
 
 [Install]

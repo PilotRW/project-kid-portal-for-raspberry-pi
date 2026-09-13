@@ -18,8 +18,15 @@ case "${1:-}" in
     ;;
   restart-kiosk)
     systemctl reset-failed kid-portal-x.service kid-portal-kiosk.service
+    systemctl stop kid-portal-kiosk.service
     systemctl restart kid-portal-x.service
-    systemctl restart kid-portal-kiosk.service
+    i=0
+    while [ "$i" -lt 20 ]; do
+      systemctl is-active --quiet kid-portal-x.service && break
+      i=$((i + 1))
+      sleep 1
+    done
+    systemctl start kid-portal-kiosk.service
     ;;
   reboot)
     systemctl reboot
