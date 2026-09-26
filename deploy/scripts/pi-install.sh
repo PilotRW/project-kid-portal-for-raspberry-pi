@@ -201,6 +201,11 @@ systemctl restart systemd-journald || true
 systemctl enable fail2ban keyd ssh
 systemctl enable kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-wifi-watchdog.timer kid-portal-x.service kid-portal-kiosk.service
 configure_zerotier
+if command -v zerotier-cli >/dev/null 2>&1; then
+  systemctl enable --now kid-portal-zerotier-status.timer
+else
+  systemctl disable --now kid-portal-zerotier-status.timer >/dev/null 2>&1 || true
+fi
 
 if [[ "$ALLOW_LAN_SSH" == "1" ]]; then
   ufw allow from "$LAN_CIDR" to any port 22 proto tcp

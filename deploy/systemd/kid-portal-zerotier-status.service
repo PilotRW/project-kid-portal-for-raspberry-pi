@@ -1,0 +1,7 @@
+[Unit]
+Description=Refresh Kid Portal ZeroTier status cache
+After=zerotier-one.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/kid-portal-zerotier-status --write-cache

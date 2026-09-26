@@ -38,7 +38,9 @@ echo
 echo "== ZeroTier =="
 if systemctl list-unit-files zerotier-one.service --no-legend 2>/dev/null | grep -q '^zerotier-one.service'; then
   systemctl is-active zerotier-one.service
+  systemctl is-active kid-portal-zerotier-status.timer
   sudo -n /usr/local/sbin/kid-portal-zerotier-status
+  test -s /run/kid-portal-zerotier-status.json
 else
   echo "not installed"
 fi

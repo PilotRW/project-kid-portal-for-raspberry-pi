@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh Kid Portal ZeroTier status cache
+
+[Timer]
+OnBootSec=5s
+OnUnitActiveSec=30s
+AccuracySec=5s
+Unit=kid-portal-zerotier-status.service
+
+[Install]
+WantedBy=timers.target

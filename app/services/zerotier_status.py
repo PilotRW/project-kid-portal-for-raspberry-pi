@@ -26,12 +26,24 @@ class ZeroTierStatus(BaseModel):
 
 
 class ZeroTierStatusService:
-    def __init__(self, helper_path: str = "/usr/local/sbin/kid-portal-zerotier-status") -> None:
+    def __init__(
+        self,
+        helper_path: str = "/usr/local/sbin/kid-portal-zerotier-status",
+        cache_path: str = "/run/kid-portal-zerotier-status.json",
+    ) -> None:
         self.helper_path = Path(helper_path)
+        self.cache_path = Path(cache_path)
 
     def get_status(self) -> ZeroTierStatus:
-        installed = self.helper_path.exists() or shutil.which("zerotier-cli") is not None
+        installed = Path("/usr/sbin/zerotier-cli").exists() or shutil.which("zerotier-cli") is not None
         service_active = self._service_active()
+        if not installed:
+            return ZeroTierStatus(installed=False, service_active=service_active)
+
+        cached_status = self._read_cache(service_active)
+        if cached_status is not None:
+            return cached_status
+
         if not self.helper_path.exists():
             return ZeroTierStatus(installed=installed, service_active=service_active)
 
@@ -58,13 +70,23 @@ class ZeroTierStatusService:
                 error=detail,
             )
 
+        return self._parse_payload(result.stdout, service_active)
+
+    def _read_cache(self, service_active: bool) -> ZeroTierStatus | None:
         try:
-            payload = json.loads(result.stdout)
+            payload = self.cache_path.read_text(encoding="utf-8")
+        except OSError:
+            return None
+        return self._parse_payload(payload, service_active)
+
+    def _parse_payload(self, raw_payload: str, service_active: bool) -> ZeroTierStatus:
+        try:
+            payload = json.loads(raw_payload)
             info = payload.get("info", {})
             networks = [self._network_from_payload(item) for item in payload.get("networks", [])]
         except (json.JSONDecodeError, AttributeError, TypeError, ValueError):
             return ZeroTierStatus(
-                installed=installed,
+                installed=True,
                 service_active=service_active,
                 error="Invalid ZeroTier status response",
             )
