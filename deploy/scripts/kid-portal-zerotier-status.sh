@@ -6,5 +6,8 @@ if [ "$#" -ne 0 ]; then
   exit 2
 fi
 
-/usr/sbin/zerotier-cli info
-/usr/sbin/zerotier-cli listnetworks
+printf '{"info":'
+/usr/sbin/zerotier-cli -j info
+printf ',"networks":'
+/usr/sbin/zerotier-cli -j listnetworks
+printf '}\n'

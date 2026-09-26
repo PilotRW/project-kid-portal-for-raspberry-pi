@@ -212,6 +212,89 @@ select {
 .network-toggle-row span { color: #c2d2cb; font-size: 13px; }
 .network-toggle-row a { overflow-wrap: anywhere; }
 
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: #c2d2cb;
+  background: rgba(237, 245, 241, 0.07);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.connection-status.is-online {
+  border-color: rgba(104, 211, 145, 0.35);
+  color: #9be5b5;
+  background: rgba(46, 125, 79, 0.2);
+}
+
+.connection-status.is-offline {
+  border-color: rgba(255, 173, 99, 0.3);
+  color: #ffc58f;
+}
+
+.network-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 12px 0 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.network-detail-grid > div {
+  min-width: 0;
+  padding: 10px 12px;
+  background: #19231f;
+}
+
+.network-detail-grid dt,
+.zerotier-network-row dt {
+  color: #8fa39a;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.network-detail-grid dd,
+.zerotier-network-row dd {
+  min-width: 0;
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  color: #edf5f1;
+  font-size: 13px;
+}
+
+.zerotier-network-row {
+  padding: 11px 12px;
+  border-left: 3px solid #f3c85b;
+  border-radius: 4px;
+  background: rgba(237, 245, 241, 0.07);
+}
+
+.zerotier-network-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.zerotier-network-title strong { color: #f3c85b; font-size: 15px; }
+.network-state { color: #9be5b5; font-size: 12px; font-weight: 700; }
+
+.zerotier-network-row dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 0;
+}
+
+.zerotier-network-row dl > div { min-width: 0; }
+
 .switch {
   position: relative;
   display: inline-flex;
@@ -306,6 +389,13 @@ select {
   display: grid;
   gap: 8px;
   margin-top: 12px;
+}
+
+@media (max-width: 760px) {
+  .network-detail-grid,
+  .zerotier-network-row dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .monitoring-metrics {

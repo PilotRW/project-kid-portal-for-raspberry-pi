@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kid Portal Admin</title>
-    <link rel="stylesheet" href="/static/admin.css?v=20260904-01" />
+    <link rel="stylesheet" href="/static/admin.css?v=20260926-01" />
   </head>
   <body>
     <main class="admin-shell">
@@ -107,6 +107,16 @@
               </label>
             </div>
             <div id="network-list" class="network-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <h2>ZeroTier</h2>
+              <span id="zerotier-connection-status" class="connection-status">Checking</span>
+            </div>
+            <dl id="zerotier-summary" class="network-detail-grid"></dl>
+            <div id="zerotier-networks" class="network-list"></div>
+            <p id="zerotier-error" class="empty" hidden></p>
           </section>
         </section>
 
@@ -420,6 +430,6 @@
         </section>
       </section>
     </main>
-    <script src="/static/admin.js?v=20260913-02"></script>
+    <script src="/static/admin.js?v=20260926-01"></script>
   </body>
 </html>

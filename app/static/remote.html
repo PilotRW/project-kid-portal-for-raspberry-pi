@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kid Portal Remote</title>
-    <link rel="stylesheet" href="/static/remote.css?v=20260906-01" />
+    <link rel="stylesheet" href="/static/remote.css?v=20260926-02" />
   </head>
   <body>
     <main class="remote-shell">
@@ -31,12 +31,22 @@
           <button class="small-button" id="lock-remote" type="button">Lock</button>
         </header>
 
+        <div class="control-mode" role="group" aria-label="D-pad mode">
+          <button type="button" data-control-mode="navigation" aria-pressed="true">Navigation</button>
+          <button type="button" data-control-mode="cursor" aria-pressed="false">Cursor</button>
+        </div>
+
         <div class="dpad" aria-label="Navigation">
-          <button class="dpad-button dpad-up" type="button" data-key="up">Up</button>
-          <button class="dpad-button dpad-left" type="button" data-key="left">Left</button>
-          <button class="dpad-button dpad-ok" type="button" data-key="ok">OK</button>
-          <button class="dpad-button dpad-right" type="button" data-key="right">Right</button>
-          <button class="dpad-button dpad-down" type="button" data-key="down">Down</button>
+          <button class="dpad-button dpad-up" type="button" data-key="up" data-pointer="up" aria-label="Up">↑</button>
+          <button class="dpad-button dpad-left" type="button" data-key="left" data-pointer="left" aria-label="Left">←</button>
+          <button class="dpad-button dpad-ok" type="button" data-key="ok" data-pointer="click">OK</button>
+          <button class="dpad-button dpad-right" type="button" data-key="right" data-pointer="right" aria-label="Right">→</button>
+          <button class="dpad-button dpad-down" type="button" data-key="down" data-pointer="down" aria-label="Down">↓</button>
+        </div>
+
+        <div class="scroll-controls" aria-label="Page scrolling">
+          <button type="button" data-pointer="scroll_up" aria-label="Scroll up">↑ <span>Scroll</span></button>
+          <button type="button" data-pointer="scroll_down" aria-label="Scroll down"><span>Scroll</span> ↓</button>
         </div>
 
         <div class="command-grid">
@@ -59,6 +69,6 @@
         <p class="status" id="remote-status" role="status"></p>
       </section>
     </main>
-    <script src="/static/remote.js?v=20260906-01"></script>
+    <script src="/static/remote.js?v=20260926-02"></script>
   </body>
 </html>

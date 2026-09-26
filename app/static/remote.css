@@ -145,6 +145,30 @@ h1 {
   gap: 16px;
 }
 
+.control-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.control-mode button {
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.control-mode button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #07100c;
+}
+
 .small-button {
   min-height: 40px;
   padding: 0 14px;
@@ -165,6 +189,7 @@ h1 {
   min-height: 0;
   background: #202a33;
   font-weight: 800;
+  font-size: 1.7rem;
 }
 
 .dpad-up {
@@ -184,6 +209,46 @@ h1 {
   background: var(--accent);
   color: #07100c;
   font-size: 1.12rem;
+}
+
+.remote-panel[data-control-mode="cursor"] .dpad {
+  cursor: crosshair;
+}
+
+.remote-panel[data-control-mode="cursor"] .dpad-ok::after {
+  content: "Click";
+  display: block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.scroll-controls {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.remote-panel[data-control-mode="cursor"] .scroll-controls {
+  display: grid;
+}
+
+.scroll-controls button {
+  min-height: 46px;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.scroll-controls span {
+  margin: 0 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.scroll-controls button:active span,
+.scroll-controls button.is-pressed span {
+  color: #07100c;
 }
 
 .dpad-right {

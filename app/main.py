@@ -24,6 +24,7 @@ from app.services.remote_control import RemoteControlService
 from app.services.search_history import SearchHistoryService
 from app.services.usage_tracker import UsageTrackerService
 from app.services.wifi_manager import WifiConnectResult, WifiManager, WifiNetwork, WifiStatus
+from app.services.zerotier_status import ZeroTierStatusService
 from app.services.youtube_api import YouTubeApiError, YouTubeApiService
 from app.services.youtube_approval_log import YouTubeApprovalLogService
 from app.services.youtube_blocked_log import YouTubeBlockedLogService
@@ -41,6 +42,7 @@ youtube_approval_log_service = YouTubeApprovalLogService()
 youtube_blocked_log_service = YouTubeBlockedLogService()
 filter_insights_service = FilterInsightsService()
 network_info_service = NetworkInfoService()
+zerotier_status_service = ZeroTierStatusService()
 usage_tracker_service = UsageTrackerService()
 wifi_manager = WifiManager()
 display_manager = DisplayManager()
@@ -162,6 +164,10 @@ class RemoteTextRequest(ParentPinRequest):
     text: str
 
 
+class RemotePointerRequest(ParentPinRequest):
+    action: str
+
+
 ADMIN_SURFACE_ALLOWED_PATHS = {
     "/",
     "/admin",
@@ -170,6 +176,7 @@ ADMIN_SURFACE_ALLOWED_PATHS = {
     "/api/admin/youtube/history/clear",
     "/api/remote/unlock",
     "/api/remote/key",
+    "/api/remote/pointer",
     "/api/remote/type",
     "/api/parent/youtube/key",
     "/api/parent/config",
@@ -721,6 +728,7 @@ async def read_admin_state(request: ParentPinRequest, http_request: Request) -> 
     return {
         "config": config.model_dump(mode="json"),
         "network": network_info_service.get_info().model_dump(mode="json"),
+        "zerotier": zerotier_status_service.get_status().model_dump(mode="json"),
         "network_access": read_network_access_state().model_dump(mode="json"),
         "storage": read_storage_info().model_dump(mode="json"),
         "monitoring": read_system_monitoring().model_dump(mode="json"),
@@ -766,6 +774,18 @@ async def send_remote_text(request: RemoteTextRequest, http_request: Request) ->
     verify_remote_pin(request.pin)
     try:
         remote_control_service.type_text(request.text)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return {"status": "sent"}
+
+
+@app.post("/api/remote/pointer")
+async def send_remote_pointer(request: RemotePointerRequest, http_request: Request) -> dict[str, str]:
+    verify_remote_pin(request.pin)
+    try:
+        remote_control_service.control_pointer(request.action)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     except RuntimeError as error:

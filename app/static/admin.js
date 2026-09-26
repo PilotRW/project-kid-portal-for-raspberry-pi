@@ -71,6 +71,7 @@ function renderState(data) {
   document.querySelector("#viewing-remaining").textContent = `${remainingMinutes} min remaining`;
   renderNetwork(data.network);
   renderNetworkAccess(data.network_access, data.network);
+  renderZeroTier(data.zerotier);
   renderStorage(data.storage);
   renderMonitoring(data.monitoring);
   renderHistory(data.history);
@@ -146,6 +147,56 @@ function renderNetwork(network) {
     `;
     list.appendChild(card);
   });
+}
+
+function renderZeroTier(zerotier) {
+  const status = document.querySelector("#zerotier-connection-status");
+  const summary = document.querySelector("#zerotier-summary");
+  const networks = document.querySelector("#zerotier-networks");
+  const error = document.querySelector("#zerotier-error");
+  if (!status || !summary || !networks || !error) return;
+
+  const connected = Boolean(zerotier?.service_active && zerotier?.online);
+  status.textContent = connected ? "Online" : zerotier?.installed ? "Offline" : "Not installed";
+  status.classList.toggle("is-online", connected);
+  status.classList.toggle("is-offline", !connected);
+
+  const serviceLabel = zerotier?.service_active ? "Active" : "Inactive";
+  summary.innerHTML = `
+    <div><dt>Service</dt><dd>${escapeHtml(serviceLabel)}</dd></div>
+    <div><dt>Node ID</dt><dd><code>${escapeHtml(zerotier?.node_id || "-")}</code></dd></div>
+    <div><dt>Version</dt><dd>${escapeHtml(zerotier?.version || "-")}</dd></div>
+    <div><dt>Networks</dt><dd>${escapeHtml(String(zerotier?.networks?.length || 0))}</dd></div>
+  `;
+
+  networks.innerHTML = "";
+  if (!zerotier?.networks?.length) {
+    networks.innerHTML = '<p class="empty">No joined ZeroTier networks.</p>';
+  } else {
+    zerotier.networks.forEach((network) => {
+      const card = document.createElement("article");
+      card.className = "zerotier-network-row";
+      const addresses = network.assigned_addresses?.length
+        ? network.assigned_addresses.join(", ")
+        : "No assigned IP";
+      card.innerHTML = `
+        <div class="zerotier-network-title">
+          <strong>${escapeHtml(network.name || "Unnamed network")}</strong>
+          <span class="network-state">${escapeHtml(network.status || "UNKNOWN")}</span>
+        </div>
+        <dl>
+          <div><dt>IP</dt><dd><code>${escapeHtml(addresses)}</code></dd></div>
+          <div><dt>Interface</dt><dd><code>${escapeHtml(network.interface || "-")}</code></dd></div>
+          <div><dt>Network ID</dt><dd><code>${escapeHtml(network.network_id || "-")}</code></dd></div>
+          <div><dt>Type</dt><dd>${escapeHtml(network.network_type || "-")}</dd></div>
+        </dl>
+      `;
+      networks.appendChild(card);
+    });
+  }
+
+  error.hidden = !zerotier?.error;
+  error.textContent = zerotier?.error || "";
 }
 
 function renderStorage(storage) {

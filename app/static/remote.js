@@ -1,7 +1,12 @@
 const state = {
   pin: sessionStorage.getItem("kidPortalRemotePin") || "",
   busy: false,
+  pointerBusy: false,
+  controlMode: localStorage.getItem("kidPortalRemoteMode") === "cursor" ? "cursor" : "navigation",
 };
+
+let pointerRepeatDelay = null;
+let pointerRepeatTimer = null;
 
 const login = document.querySelector("#remote-login");
 const panel = document.querySelector("#remote-panel");
@@ -20,7 +25,7 @@ function setStatus(node, message, isError = false) {
 function showPanel() {
   login.hidden = true;
   panel.hidden = false;
-  setStatus(remoteStatus, "Ready");
+  applyControlMode(state.controlMode);
 }
 
 function showLogin(message = "") {
@@ -103,6 +108,55 @@ async function sendText(text) {
   }
 }
 
+async function sendPointer(action, sourceButton = null) {
+  if (!state.pin || state.pointerBusy) return;
+  state.pointerBusy = true;
+  sourceButton?.classList.add("is-pressed");
+  try {
+    await postJson("/api/remote/pointer", { pin: state.pin, action });
+    setStatus(remoteStatus, action === "click" ? "Clicked" : "Cursor moved");
+  } catch (error) {
+    if (error.message.includes("Invalid remote PIN") || error.message.includes("locked")) {
+      sessionStorage.removeItem("kidPortalRemotePin");
+      state.pin = "";
+      showLogin(error.message);
+    } else {
+      setStatus(remoteStatus, error.message, true);
+    }
+  } finally {
+    window.setTimeout(() => sourceButton?.classList.remove("is-pressed"), 90);
+    state.pointerBusy = false;
+  }
+}
+
+function applyControlMode(mode) {
+  state.controlMode = mode === "cursor" ? "cursor" : "navigation";
+  localStorage.setItem("kidPortalRemoteMode", state.controlMode);
+  panel.dataset.controlMode = state.controlMode;
+  document.querySelectorAll("[data-control-mode]").forEach((button) => {
+    button.setAttribute("aria-pressed", button.dataset.controlMode === state.controlMode ? "true" : "false");
+  });
+  setStatus(remoteStatus, state.controlMode === "cursor" ? "Cursor mode" : "Navigation mode");
+}
+
+function stopPointerRepeat() {
+  window.clearTimeout(pointerRepeatDelay);
+  window.clearInterval(pointerRepeatTimer);
+  pointerRepeatDelay = null;
+  pointerRepeatTimer = null;
+}
+
+function startPointerRepeat(button) {
+  const action = button.dataset.pointer;
+  if (state.controlMode !== "cursor" || !action) return;
+  button.dataset.pointerHandled = "true";
+  sendPointer(action, button);
+  if (action === "click") return;
+  pointerRepeatDelay = window.setTimeout(() => {
+    pointerRepeatTimer = window.setInterval(() => sendPointer(action, button), 95);
+  }, 280);
+}
+
 loginForm.addEventListener("submit", (event) => {
   event.preventDefault();
   unlock(pinInput.value.trim());
@@ -114,8 +168,31 @@ document.querySelector("#lock-remote").addEventListener("click", () => {
   showLogin("Remote locked");
 });
 
-document.querySelectorAll("[data-key]").forEach((button) => {
-  button.addEventListener("click", () => sendKey(button.dataset.key, button));
+document.querySelectorAll("[data-control-mode]").forEach((button) => {
+  button.addEventListener("click", () => applyControlMode(button.dataset.controlMode));
+});
+
+document.querySelectorAll("[data-key], [data-pointer]").forEach((button) => {
+  button.addEventListener("pointerdown", (event) => {
+    if (state.controlMode !== "cursor" || !button.dataset.pointer) return;
+    event.preventDefault();
+    startPointerRepeat(button);
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach((eventName) => {
+    button.addEventListener(eventName, stopPointerRepeat);
+  });
+  button.addEventListener("click", (event) => {
+    if (state.controlMode === "cursor" && button.dataset.pointer) {
+      event.preventDefault();
+      if (button.dataset.pointerHandled === "true") {
+        delete button.dataset.pointerHandled;
+        return;
+      }
+      sendPointer(button.dataset.pointer, button);
+      return;
+    }
+    if (button.dataset.key) sendKey(button.dataset.key, button);
+  });
 });
 
 typeForm.addEventListener("submit", (event) => {
@@ -139,7 +216,12 @@ document.addEventListener("keydown", (event) => {
   const key = map[event.key];
   if (!key || panel.hidden) return;
   event.preventDefault();
-  sendKey(key);
+  const pointerAction = key === "ok" ? "click" : key;
+  if (state.controlMode === "cursor" && ["up", "down", "left", "right", "click"].includes(pointerAction)) {
+    sendPointer(pointerAction);
+  } else {
+    sendKey(key);
+  }
 });
 
 if (state.pin) {

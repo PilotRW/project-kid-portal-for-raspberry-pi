@@ -152,6 +152,7 @@ def test_admin_state_accepts_parent_pin_without_exposing_key():
     payload = response.json()
     assert "config" in payload
     assert "network" in payload
+    assert "zerotier" in payload
     assert "storage" in payload
     assert "monitoring" in payload
     assert "youtube" in payload
@@ -418,8 +419,8 @@ def test_remote_admin_includes_viewing_pin_control():
     assert "content-lan-url" in response.text
     assert "data-rule-filter=\"blocked_keywords\"" in response.text
     assert "data-rule-count=\"blocked_keywords\"" in response.text
-    assert "admin.css?v=20260904-01" in response.text
-    assert "admin.js?v=20260913-02" in response.text
+    assert "admin.css?v=20260926-01" in response.text
+    assert "admin.js?v=20260926-01" in response.text
     assert 'href="/remote"' in response.text
 
 
@@ -512,6 +513,37 @@ def test_remote_text_requires_valid_pin(monkeypatch):
     assert rejected.status_code == 403
     assert accepted.status_code == 200
     assert typed == ["bluey"]
+
+
+def test_remote_pointer_requires_remote_pin(monkeypatch):
+    actions = []
+
+    class FakeRemoteControl:
+        def control_pointer(self, action):
+            actions.append(action)
+
+    monkeypatch.setattr(main_module, "remote_control_service", FakeRemoteControl())
+    client = TestClient(app)
+
+    rejected = client.post("/api/remote/pointer", json={"pin": "1234", "action": "left"})
+    accepted = client.post("/api/remote/pointer", json={"pin": "2580", "action": "click"})
+
+    assert rejected.status_code == 403
+    assert accepted.status_code == 200
+    assert actions == ["click"]
+
+
+def test_remote_pointer_rejects_unsupported_action(monkeypatch):
+    class FakeRemoteControl:
+        def control_pointer(self, action):
+            raise ValueError("Unsupported pointer action")
+
+    monkeypatch.setattr(main_module, "remote_control_service", FakeRemoteControl())
+    client = TestClient(app)
+
+    response = client.post("/api/remote/pointer", json={"pin": "2580", "action": "drag"})
+
+    assert response.status_code == 400
 
 
 def test_network_access_update_requires_valid_pin():

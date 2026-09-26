@@ -20,6 +20,13 @@ class RemoteControlService:
         "mute": "XF86AudioMute",
     }
     MAX_TEXT_LENGTH = 160
+    POINTER_STEP = 56
+    POINTER_DIRECTIONS = {
+        "up": (0, -POINTER_STEP),
+        "down": (0, POINTER_STEP),
+        "left": (-POINTER_STEP, 0),
+        "right": (POINTER_STEP, 0),
+    }
 
     def __init__(self, command: str | None = None, display: str | None = None, xauthority: str | None = None):
         self.command = command or os.environ.get("KID_PORTAL_XDOTOOL") or shutil.which("xdotool") or "/usr/bin/xdotool"
@@ -39,6 +46,22 @@ class RemoteControlService:
         if len(normalized) > self.MAX_TEXT_LENGTH:
             raise ValueError(f"Text is limited to {self.MAX_TEXT_LENGTH} characters")
         self._run(["type", "--clearmodifiers", normalized])
+
+    def control_pointer(self, action: str) -> None:
+        if action == "click":
+            self._run(["click", "1"])
+            return
+        if action == "scroll_up":
+            self._run(["click", "--repeat", "3", "--delay", "20", "4"])
+            return
+        if action == "scroll_down":
+            self._run(["click", "--repeat", "3", "--delay", "20", "5"])
+            return
+        movement = self.POINTER_DIRECTIONS.get(action)
+        if movement is None:
+            raise ValueError("Unsupported pointer action")
+        dx, dy = movement
+        self._run(["mousemove_relative", "--", str(dx), str(dy)])
 
     def _run(self, args: list[str]) -> None:
         env = os.environ.copy()
