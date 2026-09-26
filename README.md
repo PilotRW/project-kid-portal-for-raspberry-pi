@@ -115,7 +115,7 @@ For multiple family devices, keep the real fleet inventory in ignored `.local/de
 ./deploy/fleet-deploy.sh all
 ```
 
-Tailscale management is opt-in through `KID_PORTAL_ENABLE_TAILSCALE=1`. It is used for SSH/admin deploy and monitoring; it does not expose the child-facing content port `8080`.
+ZeroTier management is opt-in through `KID_PORTAL_ENABLE_ZEROTIER=1`. It is used for SSH/admin deploy and monitoring; it does not expose the child-facing content port `8080`.
 
 Security posture and production checks are tracked in [docs/security.md](/Users/pilotrw/GITHUB/project-kid-portal-for-raspberry-pi/docs/security.md).
 

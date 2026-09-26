@@ -44,31 +44,29 @@ def test_remote_control_dependency_is_installed():
     assert "xdotool" in installer
 
 
-def test_tailscale_bootstrap_is_opt_in_and_interface_scoped():
+def test_zerotier_bootstrap_is_opt_in_and_interface_scoped():
     installer = (REPO_ROOT / "deploy/scripts/pi-install.sh").read_text(encoding="utf-8")
     bootstrap = (REPO_ROOT / "deploy/bootstrap-pi.sh").read_text(encoding="utf-8")
     deploy = (REPO_ROOT / "deploy/deploy-to-pi.sh").read_text(encoding="utf-8")
 
-    assert 'ENABLE_TAILSCALE="${KID_PORTAL_ENABLE_TAILSCALE:-0}"' in installer
-    assert "https://tailscale.com/install.sh" in installer
-    assert '--auth-key "$TAILSCALE_AUTHKEY"' in installer
-    assert "--accept-dns=false" in installer
-    assert 'ufw allow in on tailscale0 from "$MANAGEMENT_CIDR" to any port 22 proto tcp' in installer
-    assert 'ufw allow in on tailscale0 from "$MANAGEMENT_CIDR" to any port 80 proto tcp' in installer
+    assert 'ENABLE_ZEROTIER="${KID_PORTAL_ENABLE_ZEROTIER:-0}"' in installer
+    assert "https://install.zerotier.com" in installer
+    assert 'zerotier-cli join "$ZEROTIER_NETWORK_ID"' in installer
+    assert 'ufw allow in on "$ZEROTIER_INTERFACE" from "$MANAGEMENT_CIDR" to any port 22 proto tcp' in installer
+    assert 'ufw allow in on "$ZEROTIER_INTERFACE" from "$MANAGEMENT_CIDR" to any port 80 proto tcp' in installer
     assert 'ALLOW_LAN_SSH="${KID_PORTAL_ALLOW_LAN_SSH:-1}"' in installer
-    assert "KID_PORTAL_ENABLE_TAILSCALE" in bootstrap
-    assert "KID_PORTAL_ENABLE_TAILSCALE" in deploy
+    assert "KID_PORTAL_ENABLE_ZEROTIER" in bootstrap
+    assert "KID_PORTAL_ENABLE_ZEROTIER" in deploy
 
 
-def test_fleet_inventory_template_keeps_auth_keys_out_of_git():
+def test_fleet_inventory_template_keeps_real_inventory_out_of_git():
     gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
     example = (REPO_ROOT / "deploy/devices.example.json").read_text(encoding="utf-8")
     data = json.loads(example)
 
     assert ".local/" in gitignore
-    assert "tailscale_authkey_env" in example
-    assert "tskey-" not in example
-    assert data["defaults"]["enable_tailscale"] is True
+    assert data["defaults"]["zerotier_network_id"] == "0123456789abcdef"
+    assert data["defaults"]["enable_zerotier"] is True
     assert data["defaults"]["allow_lan_ssh"] is True
 
 
@@ -91,7 +89,7 @@ def test_fleet_runner_lists_example_inventory():
     assert result.returncode == 0
     assert "home" in result.stdout
     assert "family-1" in result.stdout
-    assert "tailscale=1" in result.stdout
+    assert "zerotier=1" in result.stdout
 
 
 def test_network_access_uses_deployed_lan_cidr_file():

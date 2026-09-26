@@ -81,7 +81,12 @@
       "peppa pig",
       "paw patrol"
     ],
-    "blocked_channels": [],
+    "blocked_channels": [
+      "C Daily",
+      "UCmmlHsRZzocU9UrXM2mcsng",
+      "Socks Animations",
+      "UCXMwCQVey4PhdWFJ6WhAVhA"
+    ],
     "blocked_categories": [
       "20",
       "Gaming"

@@ -1,0 +1,3 @@
+pi ALL=(root) NOPASSWD: /usr/sbin/ufw status
+pi ALL=(root) NOPASSWD: /usr/bin/fail2ban-client status sshd
+pi ALL=(root) NOPASSWD: /usr/local/sbin/kid-portal-zerotier-status

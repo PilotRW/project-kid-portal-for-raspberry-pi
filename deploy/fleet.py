@@ -48,23 +48,13 @@ def host_for(device: dict[str, Any], action: str) -> str:
 def env_for(device: dict[str, Any]) -> dict[str, str]:
     env = os.environ.copy()
     env["KID_PORTAL_LAN_CIDR"] = str(device.get("lan_cidr", "192.168.0.0/24"))
-    env["KID_PORTAL_MANAGEMENT_CIDR"] = str(device.get("management_cidr", "100.64.0.0/10"))
+    env["KID_PORTAL_MANAGEMENT_CIDR"] = str(device.get("management_cidr", ""))
     env["KID_PORTAL_ALLOW_LAN_SSH"] = truthy(device.get("allow_lan_ssh", True))
-    env["KID_PORTAL_ENABLE_TAILSCALE"] = truthy(device.get("enable_tailscale", False))
+    env["KID_PORTAL_ENABLE_ZEROTIER"] = truthy(device.get("enable_zerotier", False))
 
-    hostname = device.get("tailscale_hostname") or device.get("hostname")
-    if hostname:
-        env["KID_PORTAL_TAILSCALE_HOSTNAME"] = str(hostname)
-
-    tags = device.get("tailscale_tags")
-    if tags:
-        env["KID_PORTAL_TAILSCALE_TAGS"] = str(tags)
-
-    authkey_env = device.get("tailscale_authkey_env")
-    if authkey_env:
-        authkey = os.environ.get(str(authkey_env), "")
-        if authkey:
-            env["KID_PORTAL_TAILSCALE_AUTHKEY"] = authkey
+    network_id = device.get("zerotier_network_id")
+    if network_id:
+        env["KID_PORTAL_ZEROTIER_NETWORK_ID"] = str(network_id)
     return env
 
 
@@ -89,7 +79,7 @@ def list_devices(inventory: dict[str, Any]) -> int:
         print(
             f"{name}\tuser={device.get('user', 'pi')}\t"
             f"host={device.get('host', '-')}\tmanagement={device.get('management_host', '-')}\t"
-            f"tailscale={truthy(device.get('enable_tailscale', False))}"
+            f"zerotier={truthy(device.get('enable_zerotier', False))}"
         )
     return 0
 

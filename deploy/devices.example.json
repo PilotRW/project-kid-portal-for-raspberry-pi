@@ -2,24 +2,20 @@
   "defaults": {
     "user": "pi",
     "lan_cidr": "192.168.0.0/24",
-    "management_cidr": "100.64.0.0/10",
+    "management_cidr": "10.147.0.0/16",
     "allow_lan_ssh": true,
-    "enable_tailscale": true,
-    "tailscale_tags": "tag:kid-portal"
+    "enable_zerotier": true,
+    "zerotier_network_id": "0123456789abcdef"
   },
   "devices": {
     "home": {
       "host": "192.168.0.142",
-      "management_host": "kid-portal-home.your-tailnet.ts.net",
-      "tailscale_hostname": "kid-portal-home",
-      "tailscale_authkey_env": "KID_PORTAL_TAILSCALE_AUTHKEY_HOME",
+      "management_host": "10.147.0.10",
       "profile": "home"
     },
     "family-1": {
       "host": "192.168.1.50",
-      "management_host": "kid-portal-family-1.your-tailnet.ts.net",
-      "tailscale_hostname": "kid-portal-family-1",
-      "tailscale_authkey_env": "KID_PORTAL_TAILSCALE_AUTHKEY_FAMILY_1",
+      "management_host": "10.147.0.11",
       "profile": "default"
     }
   }

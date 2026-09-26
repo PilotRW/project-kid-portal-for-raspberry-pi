@@ -20,11 +20,11 @@ echo "== Services =="
 systemctl is-active ssh fail2ban kid-portal.service kid-portal-admin.service kid-portal-network-access.path kid-portal-software-update.path kid-portal-wifi-watchdog.timer kid-portal-x.service kid-portal-kiosk.service
 echo
 echo "== UFW =="
-sudo ufw status
+sudo -n /usr/sbin/ufw status
 echo
 echo "== Network =="
-if command -v iw >/dev/null 2>&1; then
-  iw dev wlan0 get power_save || true
+if [[ -x /usr/sbin/iw ]]; then
+  /usr/sbin/iw dev wlan0 get power_save || true
 else
   echo "iw: not installed"
 fi
@@ -35,11 +35,19 @@ if [[ -n "$ACTIVE_WIFI_CONNECTION" ]]; then
 fi
 systemctl list-timers kid-portal-wifi-watchdog.timer --no-pager || true
 echo
+echo "== ZeroTier =="
+if systemctl list-unit-files zerotier-one.service --no-legend 2>/dev/null | grep -q '^zerotier-one.service'; then
+  systemctl is-active zerotier-one.service
+  sudo -n /usr/local/sbin/kid-portal-zerotier-status
+else
+  echo "not installed"
+fi
+echo
 echo "== Journal =="
 journalctl --list-boots --no-pager | tail -n 5
 echo
 echo "== fail2ban =="
-sudo fail2ban-client status sshd
+sudo -n /usr/bin/fail2ban-client status sshd
 echo
 echo "== HTTP =="
 curl -fsS http://127.0.0.1:8080/api/youtube/status

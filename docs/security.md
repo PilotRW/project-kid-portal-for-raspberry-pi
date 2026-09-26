@@ -8,7 +8,7 @@ This project is designed as an HDMI-first kiosk. The child-facing content UI run
 - `LAN:80` is the parent admin surface and serves Settings as the default page.
 - `LAN:8080` is closed by default. It can be opened temporarily from Settings with the "Expose content on LAN" switch.
 - `SSH:22` should be allowed only from the home LAN.
-- `tailscale0:22` and `tailscale0:80` can be enabled for private fleet management. They are scoped to the Tailscale interface and management CIDR.
+- `<zerotier-interface>:22` and `<zerotier-interface>:80` can be enabled for private fleet management. They are scoped to the joined ZeroTier interface and configured management CIDR.
 
 The `8080` exposure switch does not grant the FastAPI web process broad sudo access. The admin app writes a request file under `/run/kid-portal`, and `kid-portal-network-access.path` triggers a narrow root oneshot that only applies or removes the UFW rule for port `8080`.
 
@@ -23,11 +23,11 @@ Expected default LAN rules:
 
 Port `8080` should appear only while content LAN access is intentionally enabled.
 
-With Tailscale enabled, expected extra rules:
+With ZeroTier joined and a management CIDR configured, expected extra rules:
 
 ```text
-22/tcp ALLOW IN 100.64.0.0/10 on tailscale0
-80/tcp ALLOW IN 100.64.0.0/10 on tailscale0
+22/tcp ALLOW IN <management-cidr> on <zerotier-interface>
+80/tcp ALLOW IN <management-cidr> on <zerotier-interface>
 ```
 
 Useful checks:
