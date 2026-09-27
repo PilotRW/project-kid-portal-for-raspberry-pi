@@ -20,7 +20,7 @@ class RemoteControlService:
         "mute": "XF86AudioMute",
     }
     MAX_TEXT_LENGTH = 160
-    POINTER_STEP = 56
+    POINTER_STEP = 28
     POINTER_DIRECTIONS = {
         "up": (0, -POINTER_STEP),
         "down": (0, POINTER_STEP),
@@ -61,15 +61,55 @@ class RemoteControlService:
         if movement is None:
             raise ValueError("Unsupported pointer action")
         dx, dy = movement
-        self._run(["mousemove_relative", "--", str(dx), str(dy)])
+        width, height = self._display_geometry()
+        x, y = self._pointer_location()
+        target_x = min(max(x + dx, 0), width - 1)
+        target_y = min(max(y + dy, 0), height - 1)
+        self._run(["mousemove", "--sync", str(target_x), str(target_y)])
+
+    def _display_geometry(self) -> tuple[int, int]:
+        parts = self._query(["getdisplaygeometry"]).split()
+        if len(parts) != 2:
+            raise RuntimeError("Could not read display geometry")
+        try:
+            width, height = (int(value) for value in parts)
+        except ValueError as error:
+            raise RuntimeError("Could not read display geometry") from error
+        if width < 1 or height < 1:
+            raise RuntimeError("Could not read display geometry")
+        return width, height
+
+    def _pointer_location(self) -> tuple[int, int]:
+        values = {}
+        for line in self._query(["getmouselocation", "--shell"]).splitlines():
+            key, separator, value = line.partition("=")
+            if separator:
+                values[key] = value
+        try:
+            return int(values["X"]), int(values["Y"])
+        except (KeyError, ValueError) as error:
+            raise RuntimeError("Could not read pointer location") from error
 
     def _run(self, args: list[str]) -> None:
+        self._execute(args)
+
+    def _query(self, args: list[str]) -> str:
+        return self._execute(args).stdout
+
+    def _execute(self, args: list[str]) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env["DISPLAY"] = self.display
         if self.xauthority and Path(self.xauthority).exists():
             env["XAUTHORITY"] = self.xauthority
         try:
-            subprocess.run([self.command, *args], check=True, timeout=5, env=env, capture_output=True, text=True)
+            return subprocess.run(
+                [self.command, *args],
+                check=True,
+                timeout=5,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
         except FileNotFoundError as error:
             raise RuntimeError("xdotool is not installed") from error
         except subprocess.TimeoutExpired as error:
